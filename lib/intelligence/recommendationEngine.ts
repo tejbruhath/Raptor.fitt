@@ -74,9 +74,10 @@ export function recommendNextWeight(
   const lastWorkout = history[history.length - 1];
   const lastMaxWeight = Math.max(...lastWorkout.sets.map(s => s.weight));
   const lastAvgReps = lastWorkout.sets.reduce((sum, s) => sum + s.reps, 0) / lastWorkout.sets.length;
-  const lastAvgRPE = lastWorkout.sets
-    .filter(s => s.rpe)
-    .reduce((sum, s) => sum + (s.rpe || 7), 0) / (lastWorkout.sets.filter(s => s.rpe).length || 1);
+  const rpeSets = lastWorkout.sets.filter(s => s.rpe);
+  const lastAvgRPE = rpeSets.length > 0
+    ? rpeSets.reduce((sum, s) => sum + s.rpe!, 0) / rpeSets.length
+    : 7; // Default neutral RPE when not tracked
   
   // Calculate progress rate
   const progressRate = calculateProgressRate(history);
@@ -108,12 +109,18 @@ export function recommendNextWeight(
   let suggestedReps = Math.round(lastAvgReps);
   
   // Progressive overload: increase volume if weight is staying similar
-  if (weightIncrease < lastMaxWeight * 0.02) {
-    // Less than 2% increase - add volume instead
+  const MAX_SETS = 5;
+  const ABS_THRESHOLD = 1.0; // 1kg minimum increase
+  
+  if (lastMaxWeight === 0) {
+    // No previous weight data - use defaults
+    // Already set above, no changes needed
+  } else if (weightIncrease < ABS_THRESHOLD || weightIncrease < lastMaxWeight * 0.02) {
+    // Less than 2% increase or below absolute threshold - add volume instead
     if (lastAvgReps < 12) {
-      suggestedReps += 1;
-    } else if (suggestedSets < 5) {
-      suggestedSets += 1;
+      suggestedReps = Math.min(15, suggestedReps + 1); // Cap reps at 15
+    } else if (suggestedSets < MAX_SETS) {
+      suggestedSets = Math.min(MAX_SETS, suggestedSets + 1);
       suggestedReps = Math.max(8, Math.round(lastAvgReps * 0.8));
     }
   }
@@ -153,9 +160,10 @@ export function generateWorkoutPlan(
   expectedSI: number,
   recoveryScore: number,
   muscleGroup?: string
-): WorkoutPlan {
+): WorkoutPlan & { filteredCount: number } {
   const recommendations: Recommendation[] = [];
   const fatigueFactor = recoveryScore / 100;
+  let filteredCount = 0;
   
   // Check if deload is needed
   const deloadSuggested = currentSI < expectedSI * 0.9; // More than 10% below expected
@@ -172,6 +180,13 @@ export function generateWorkoutPlan(
   exerciseHistory.forEach((history, exercise) => {
     // Filter by muscle group if specified
     if (muscleGroup && history[0]?.muscleGroup !== muscleGroup) {
+      filteredCount++;
+      return;
+    }
+    
+    // Skip if no history available
+    if (!history[0]) {
+      filteredCount++;
       return;
     }
     
@@ -206,6 +221,7 @@ export function generateWorkoutPlan(
     overallIntensity,
     expectedSIGain,
     deloadSuggested,
+    filteredCount,
   };
 }
 
@@ -271,9 +287,17 @@ export function suggestRestDays(
   // Count workouts this week
   const workoutsThisWeek = lastWeek.length;
   
-  // Check if trained today
-  const today = new Date().toDateString();
-  const trainedToday = recentWorkouts.some(w => new Date(w.date).toDateString() === today);
+  // Check if trained today (timezone-safe comparison)
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const trainedToday = recentWorkouts.some(w => {
+    try {
+      const workoutDate = new Date(w.date);
+      return workoutDate.toISOString().slice(0, 10) === todayStr;
+    } catch {
+      return false; // Invalid date
+    }
+  });
   
   if (trainedToday) {
     return {
@@ -284,10 +308,11 @@ export function suggestRestDays(
   }
   
   if (workoutsThisWeek >= targetFrequency) {
+    const now = new Date();
     return {
       shouldRest: true,
       reason: `Hit target frequency (${targetFrequency}/week)`,
-      nextWorkoutDate: new Date(weekAgo.getTime() + 8 * 24 * 60 * 60 * 1000).toISOString(),
+      nextWorkoutDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
   }
   

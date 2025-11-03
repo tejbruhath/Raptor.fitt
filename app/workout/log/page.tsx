@@ -149,16 +149,20 @@ export default function LogWorkout() {
       { reps: 10, weight: 20, rpe: 7, isPR: false }
     ];
     
-    setCurrentExercise({
+    const newExercise = {
       name: exerciseName,
       muscleGroup: selectedMuscleGroup || 'chest',
       sets: previousSets.map(s => ({ ...s, isPR: false })),
-    });
+    };
+    
+    setCurrentExercise(newExercise);
     setShowSetModal(true);
     
     // Fetch recommendation for this exercise
     if (session?.user?.id) {
       setLoadingRecommendation(true);
+      const requestedExercise = exerciseName;
+      
       try {
         const res = await fetch(`/api/recommendations?userId=${session.user.id}`);
         if (res.ok) {
@@ -166,7 +170,14 @@ export default function LogWorkout() {
           const rec = data.exerciseRecommendations?.find(
             (r: any) => r.exercise === exerciseName
           );
-          setExerciseRecommendation(rec || null);
+          
+          // Only update if still on the same exercise
+          setCurrentExercise(current => {
+            if (current?.name === requestedExercise) {
+              setExerciseRecommendation(rec || null);
+            }
+            return current;
+          });
         }
       } catch (error) {
         console.error('Failed to fetch recommendation:', error);
@@ -671,12 +682,12 @@ export default function LogWorkout() {
                     exercise={exerciseRecommendation.exercise}
                     lastWeight={exerciseRecommendation.lastWeight}
                     lastReps={exerciseRecommendation.lastReps}
-                    lastSets={currentExercise.sets.length}
+                    lastSets={exerciseRecommendation.lastSets || currentExercise.sets.length}
                     suggestedWeight={exerciseRecommendation.suggestedWeight}
                     suggestedReps={exerciseRecommendation.suggestedReps}
-                    suggestedSets={currentExercise.sets.length}
+                    suggestedSets={exerciseRecommendation.suggestedSets || currentExercise.sets.length}
                     reasoning={exerciseRecommendation.recommendation}
-                    confidence={85}
+                    confidence={exerciseRecommendation.confidence || 85}
                   />
                 )}
                 

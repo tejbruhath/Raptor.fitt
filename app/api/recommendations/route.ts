@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Workout from '@/lib/models/Workout';
 import Recovery from '@/lib/models/Recovery';
-import { recommendNextWeight } from '@/lib/intelligence/recommendationEngine';
-import { calculateRecoveryScore } from '@/lib/intelligence/recoveryIndex';
 
 export async function GET(request: NextRequest) {
   try {
@@ -102,37 +100,52 @@ export async function GET(request: NextRequest) {
           let recommendation = "";
           let suggestedWeight = lastHeaviest.weight;
           let suggestedReps = lastHeaviest.reps;
+          let suggestedSets = lastSession.sets.length;
+          let confidence = 75; // Base confidence
 
           if (avgRPE < 7) {
             // Can increase weight
             suggestedWeight = Math.round((lastHeaviest.weight * 1.025) / 2.5) * 2.5;
             recommendation = "Increase weight - previous RPE was low";
+            confidence = 85;
           } else if (avgRPE > 9) {
             // Decrease weight or reps
             suggestedWeight = Math.round((lastHeaviest.weight * 0.95) / 2.5) * 2.5;
             recommendation = "Reduce weight - previous RPE was very high";
+            confidence = 90;
           } else if (lastHeaviest.weight === prevHeaviest.weight && lastHeaviest.reps === prevHeaviest.reps) {
             // Stagnant - try to progress
             suggestedReps = lastHeaviest.reps + 1;
             recommendation = "Add 1 rep - maintain progressive overload";
+            confidence = 80;
           } else if (lastHeaviest.weight > prevHeaviest.weight) {
             // Already progressing
             recommendation = "Keep current weight - good progress";
+            confidence = 85;
           } else {
             // Standard progression
             suggestedWeight = Math.round((lastHeaviest.weight * 1.025) / 2.5) * 2.5;
             recommendation = "Standard 2.5% increase";
+            confidence = 75;
           }
+          
+          // Adjust confidence based on history depth
+          if (previousSessions.length >= 3) confidence += 5;
+          if (previousSessions.length >= 5) confidence += 5;
+          confidence = Math.min(95, confidence);
 
           exerciseRecommendations.push({
             exercise: exercise.name,
             muscleGroup: exercise.muscleGroup,
             lastWeight: lastHeaviest.weight,
             lastReps: lastHeaviest.reps,
+            lastSets: lastSession.sets.length,
             lastRPE: Math.round(avgRPE * 10) / 10,
             suggestedWeight,
             suggestedReps,
+            suggestedSets,
             recommendation,
+            confidence,
           });
         }
       }

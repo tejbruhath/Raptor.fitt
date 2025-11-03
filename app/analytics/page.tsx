@@ -243,6 +243,12 @@ export default function Analytics() {
         {growthPrediction && growthPrediction.currentSI && growthPrediction.projectedSI && (
           (() => {
             const expectedSI = growthPrediction.prediction.predicted[growthPrediction.prediction.predicted.length - 1]?.value || growthPrediction.projectedSI;
+            
+            // Guard against division by zero or non-positive expectedSI
+            if (expectedSI <= 0) {
+              return null;
+            }
+            
             const deviation = ((expectedSI - growthPrediction.currentSI) / expectedSI) * 100;
             
             if (deviation > 10) {
