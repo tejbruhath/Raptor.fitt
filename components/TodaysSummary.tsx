@@ -31,7 +31,7 @@ export default function TodaysSummary() {
   }
 
   const completedCount = tasks.filter((t) => t.completed).length;
-  const progress = (completedCount / tasks.length) * 100;
+  const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
   return (
     <motion.section
