@@ -202,7 +202,11 @@ export default function Profile() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted mb-1">Bodyweight</p>
-              <p className="text-2xl font-bold font-mono">{userData?.bodyweight || 0} kg</p>
+              <p className="text-2xl font-bold font-mono">
+                {Array.isArray(userData?.bodyweight) 
+                  ? userData.bodyweight[userData.bodyweight.length - 1] || 0 
+                  : userData?.bodyweight || 0} kg
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted mb-1">Height</p>

@@ -23,10 +23,11 @@ async function seedTestUser() {
         email: 'test@raptor.fitt',
         name: 'Test Raptor',
         password: hashedPassword,
-        bodyweight: 80,
+        bodyweight: [80],
         height: 180,
         age: 28,
         trainingAge: 3,
+        onboarded: true,
         settings: {
           units: 'metric',
           notifications: true,
@@ -34,7 +35,11 @@ async function seedTestUser() {
       });
       console.log('✅ Test user created');
     } else {
-      console.log('✅ Test user exists');
+      // Update existing user to ensure correct format
+      testUser.bodyweight = [80];
+      testUser.onboarded = true;
+      await testUser.save();
+      console.log('✅ Test user exists (updated bodyweight format)');
     }
 
     const userId = testUser._id;

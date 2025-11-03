@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Droplet } from "lucide-react";
 import Link from "next/link";
+import DatePicker from "@/components/DatePicker";
 
 interface Meal {
   name: string;
@@ -18,6 +19,8 @@ interface Meal {
 export default function LogNutrition() {
   const { data: session } = useSession();
   const router = useRouter();
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [waterIntake, setWaterIntake] = useState(0);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [currentMeal, setCurrentMeal] = useState<Meal>({
     name: "",
@@ -86,9 +89,10 @@ export default function LogNutrition() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: session.user.id,
-          date: new Date().toISOString(),
+          date: new Date(date).toISOString(),
           meals,
           totals,
+          waterIntake,
         }),
       });
 
@@ -125,6 +129,19 @@ export default function LogNutrition() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        {/* Date Picker */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card"
+        >
+          <DatePicker 
+            value={date} 
+            onChange={setDate} 
+            label="Log Date"
+          />
+        </motion.div>
+
         {/* Macro Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -139,6 +156,23 @@ export default function LogNutrition() {
             <MacroCard label="Protein" value={totals.protein} unit="g" color="positive" />
             <MacroCard label="Carbs" value={totals.carbs} unit="g" color="warning" />
             <MacroCard label="Fats" value={totals.fats} unit="g" color="secondary" />
+          </div>
+          
+          {/* Water Intake */}
+          <div className="mt-6">
+            <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+              <Droplet className="w-4 h-4 text-primary" />
+              Water Intake (liters)
+            </label>
+            <input
+              type="number"
+              value={waterIntake || ""}
+              onChange={(e) => setWaterIntake(Number(e.target.value))}
+              className="input w-full"
+              placeholder="0"
+              step="0.1"
+              min="0"
+            />
           </div>
         </motion.div>
 

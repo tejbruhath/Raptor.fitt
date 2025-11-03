@@ -57,9 +57,12 @@ export default function Analytics() {
       const siRes = await fetch(`/api/strength-index?userId=${userId}`);
       if (siRes.ok) {
         const { strengthIndex } = await siRes.json();
-        // Limit to last 60 days for mobile
-        const last60Days = strengthIndex.slice(-60);
-        setGrowthData(last60Days);
+        // Convert to chart format
+        const chartData = strengthIndex.map((si: any) => ({
+          date: new Date(si.date).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+          si: si.totalSI,
+        })).slice(-30);  // Last 30 days
+        setGrowthData(chartData);
       }
 
       // Fetch workouts for volume chart
@@ -224,36 +227,33 @@ export default function Analytics() {
           <h2 className="text-2xl font-heading font-bold mb-6">
             Strength Index Growth
           </h2>
-          {growthData && growthData.observed && growthData.observed.length > 0 ? (
-            <ComparisonChart
-              expected={growthData.expected || []}
-              observed={growthData.observed || []}
-              futureProjection={growthData.futureProjection || []}
-              title="Strength Index Growth"
-              yAxisLabel="SI"
-            />
-          ) : (
+          {growthData && growthData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={[]}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E1E1E" />
-              <XAxis dataKey="date" stroke="#8C8C8C" />
-              <YAxis stroke="#8C8C8C" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#121212",
-                  border: "1px solid #14F1C0",
-                  borderRadius: "8px",
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="si"
-                stroke="#14F1C0"
-                strokeWidth={3}
-                dot={{ fill: "#14F1C0", r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+              <LineChart data={growthData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E1E1E" />
+                <XAxis dataKey="date" stroke="#8C8C8C" />
+                <YAxis stroke="#8C8C8C" domain={[50, 250]} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#121212",
+                    border: "1px solid #14F1C0",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="si"
+                  stroke="#14F1C0"
+                  strokeWidth={3}
+                  dot={{ fill: "#14F1C0", r: 6 }}
+                  name="Strength Index"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted">No SI data yet. Log workouts to see your progress!</p>
+            </div>
           )}
         </motion.div>
 

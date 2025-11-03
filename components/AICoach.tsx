@@ -73,7 +73,8 @@ export default function AICoach() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[999] p-4"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -88,10 +89,11 @@ export default function AICoach() {
             />
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9, y: 0 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              exit={{ opacity: 0, scale: 0.9, y: 0 }}
               className="relative z-10 w-full max-w-lg sm:max-w-2xl max-h-[85vh] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+              style={{ margin: 'auto' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}

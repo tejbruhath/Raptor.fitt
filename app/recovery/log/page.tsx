@@ -148,7 +148,7 @@ export default function LogRecovery() {
                 className="flex-1"
               />
               <span className="text-3xl font-bold font-mono text-primary w-24 text-right">
-                {recovery.sleepHours}h
+                {recovery.sleepHours.toFixed(1)}h
               </span>
             </div>
           </label>

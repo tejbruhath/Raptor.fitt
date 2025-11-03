@@ -15,7 +15,7 @@ export default function StrengthIndexRing({
   trend,
 }: StrengthIndexRingProps) {
   const circumference = 2 * Math.PI * 90;
-  const progress = (value / 200) * 100; // Assuming max SI of 200
+  const progress = (value / 250) * 100; // Max SI of 250 (elite natural)
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   const trendIcon = {
