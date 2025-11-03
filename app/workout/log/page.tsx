@@ -30,6 +30,7 @@ export default function LogWorkout() {
   });
   const [saving, setSaving] = useState(false);
   const [loadingLastWorkout, setLoadingLastWorkout] = useState(false);
+  const [recentWorkouts, setRecentWorkouts] = useState<any[]>([]);
 
   async function loadLastWorkout() {
     try {
@@ -50,6 +51,35 @@ export default function LogWorkout() {
       console.error("Failed to load last workout:", error);
     } finally {
       setLoadingLastWorkout(false);
+    }
+  }
+
+  async function fetchRecentWorkouts() {
+    if (!session?.user?.id) return;
+    try {
+      const res = await fetch(`/api/workouts?userId=${session.user.id}`);
+      const data = await res.json();
+      setRecentWorkouts(data.workouts?.slice(0, 5) || []);
+    } catch (e) {
+      console.error('Failed to fetch recent workouts', e);
+    }
+  }
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchRecentWorkouts();
+    }
+  }, [session]);
+
+  async function deleteWorkout(id: string) {
+    if (!session?.user?.id) return;
+    try {
+      const res = await fetch(`/api/workouts?id=${id}&userId=${session.user.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setRecentWorkouts(prev => prev.filter((w) => w._id !== id));
+      }
+    } catch (e) {
+      console.error('Delete workout failed', e);
     }
   }
 
@@ -143,6 +173,17 @@ export default function LogWorkout() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prs }),
           });
+        }
+
+        // Trigger SI recalculation
+        try {
+          await fetch('/api/strength-index', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: session.user.id }),
+          });
+        } catch (e) {
+          console.warn('SI recalculation failed or not applicable');
         }
 
         router.push("/dashboard");
@@ -353,6 +394,33 @@ export default function LogWorkout() {
             </p>
           </motion.div>
         )}
+
+        {/* Recent Workouts (Delete support) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-heading font-bold">Recent Workouts</h2>
+            <button className="btn-ghost text-sm" onClick={fetchRecentWorkouts}>Refresh</button>
+          </div>
+          {recentWorkouts.length === 0 ? (
+            <p className="text-muted">No workouts yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {recentWorkouts.map((w) => (
+                <div key={w._id} className="flex items-center justify-between p-3 bg-surface/50 rounded-lg">
+                  <div>
+                    <p className="font-semibold">{new Date(w.date || w.createdAt).toLocaleString()}</p>
+                    <p className="text-sm text-muted">{w.exercises?.length || 0} exercises</p>
+                  </div>
+                  <button className="text-negative hover:text-accent" onClick={() => deleteWorkout(w._id)}>Delete</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
       </main>
     </div>
   );

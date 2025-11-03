@@ -30,6 +30,11 @@ export default function Analytics() {
   const [growthData, setGrowthData] = useState<any>(null);
   const [volumeData, setVolumeData] = useState<any[]>([]);
   const [muscleData, setMuscleData] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    avgWeeklyVolume: 0,
+    workoutsThisMonth: 0,
+    prsThisMonth: 0,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -112,6 +117,41 @@ export default function Analytics() {
       }));
       setMuscleData(muscleChart);
 
+      // Calculate real stats
+      const now = new Date();
+      const workoutsThisMonth = workouts.filter((w: any) => {
+        const d = new Date(w.date || w.createdAt);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+
+      // Calculate average weekly volume (last 4 weeks)
+      const fourWeeksAgo = new Date();
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+      const recentWorkouts = workouts.filter((w: any) => new Date(w.date || w.createdAt) >= fourWeeksAgo);
+      const totalVolume = recentWorkouts.reduce((sum: number, w: any) => {
+        return sum + w.exercises.reduce((exSum: number, ex: any) => {
+          return exSum + ex.sets.reduce((setSum: number, set: any) => {
+            return setSum + set.reps * set.weight;
+          }, 0);
+        }, 0);
+      }, 0);
+      const avgWeeklyVolume = recentWorkouts.length > 0 ? Math.round(totalVolume / 4) : 0;
+
+      // Get PRs this month
+      const prsRes = await fetch(`/api/achievements?userId=${userId}`);
+      const { achievements } = await prsRes.json();
+      const prsThisMonth = achievements.filter((a: any) => {
+        if (!a.isPR) return false;
+        const d = new Date(a.unlockedAt);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+
+      setStats({
+        avgWeeklyVolume,
+        workoutsThisMonth,
+        prsThisMonth,
+      });
+
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
@@ -155,22 +195,22 @@ export default function Analytics() {
           <StatCard
             icon={<TrendingUp className="w-6 h-6" />}
             label="Avg Weekly Volume"
-            value="9,602 kg"
-            change="+12.3%"
+            value={`${stats.avgWeeklyVolume.toLocaleString()} kg`}
+            change=""
             positive
           />
           <StatCard
             icon={<Activity className="w-6 h-6" />}
             label="Workouts This Month"
-            value="23"
-            change="+3"
+            value={`${stats.workoutsThisMonth}`}
+            change=""
             positive
           />
           <StatCard
             icon={<Target className="w-6 h-6" />}
             label="PRs This Month"
-            value="8"
-            change="+2"
+            value={`${stats.prsThisMonth}`}
+            change=""
             positive
           />
         </div>

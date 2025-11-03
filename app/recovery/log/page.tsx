@@ -19,11 +19,13 @@ export default function LogRecovery() {
   });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<any[]>([]);
 
   // Auto-load last recovery log when page opens
   useEffect(() => {
     if (session?.user?.id) {
       loadLastRecovery();
+      loadHistory();
     }
   }, [session]);
 
@@ -46,6 +48,18 @@ export default function LogRecovery() {
       console.error("Failed to load last recovery:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch(`/api/recovery?userId=${session?.user?.id}`);
+      const data = await res.json();
+      if (data.recovery) {
+        setHistory(data.recovery.slice(0, 10)); // Show last 10 entries
+      }
+    } catch (error) {
+      console.error("Failed to load recovery history:", error);
     }
   }
 
@@ -280,6 +294,53 @@ export default function LogRecovery() {
             Based on sleep, quality, soreness, and stress
           </p>
         </motion.div>
+
+        {/* Recovery History */}
+        {history.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="card"
+          >
+            <h3 className="text-xl font-heading font-bold mb-4">Recovery History</h3>
+            <div className="space-y-3">
+              {history.map((log: any, idx: number) => (
+                <div key={log._id || idx} className="p-4 bg-surface/50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-semibold">
+                      {new Date(log.date || log.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-muted">
+                      {new Date(log.date || log.createdAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted">Sleep</p>
+                      <p className="font-mono font-semibold text-primary">{log.sleepHours}h</p>
+                    </div>
+                    <div>
+                      <p className="text-muted">Quality</p>
+                      <p className="font-mono font-semibold text-primary">{log.sleepQuality}/10</p>
+                    </div>
+                    <div>
+                      <p className="text-muted">Soreness</p>
+                      <p className="font-mono font-semibold text-warning">{log.soreness}/10</p>
+                    </div>
+                    <div>
+                      <p className="text-muted">Stress</p>
+                      <p className="font-mono font-semibold text-negative">{log.stress}/10</p>
+                    </div>
+                  </div>
+                  {log.notes && (
+                    <p className="text-sm text-muted mt-2 italic">"{log.notes}"</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </main>
     </div>
   );

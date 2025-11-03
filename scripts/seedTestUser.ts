@@ -210,13 +210,13 @@ async function seedTestUser() {
 
     // Calculate Strength Index snapshots
     const allWorkouts = await Workout.find({ userId }).sort({ date: 1 });
-    const siSnapshots = [];
+    const siSnapshots: Array<{ userId: any; date: Date; totalSI: number; breakdown: any; change: number; changePercent: number }> = [];
 
     for (let i = 0; i < allWorkouts.length; i += 3) {
       const workoutSubset = allWorkouts.slice(Math.max(0, i - 10), i + 1);
       const si = calculateStrengthIndex(workoutSubset, testUser.bodyweight);
 
-      const prevSI = siSnapshots.length > 0 ? siSnapshots[siSnapshots.length - 1].totalSI : 0;
+      const prevSI: number = siSnapshots.length > 0 ? siSnapshots[siSnapshots.length - 1].totalSI : 0;
       const change = si.totalSI - prevSI;
       const changePercent = prevSI > 0 ? (change / prevSI) * 100 : 0;
 

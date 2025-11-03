@@ -235,16 +235,13 @@ export default function Profile() {
               </span>
               <span className="text-muted">→</span>
             </Link>
-            <button 
-              onClick={() => setIsEditing(!isEditing)}
-              className="w-full flex items-center justify-between p-4 bg-surface rounded-lg hover:bg-neutral transition-colors"
-            >
+            <Link href="/onboarding" className="w-full flex items-center justify-between p-4 bg-surface rounded-lg hover:bg-neutral transition-colors">
               <span className="flex items-center gap-3">
                 <Edit className="w-5 h-5 text-primary" />
                 <span>Edit Profile</span>
               </span>
               <span className="text-muted">→</span>
-            </button>
+            </Link>
           </div>
         </motion.div>
       </main>

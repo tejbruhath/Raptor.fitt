@@ -74,9 +74,10 @@ function generateCoachResponse(message: string, context: any, workouts: any[]): 
     }
     
     const lastWorkout = workouts[0];
-    const muscleGroups = new Set(lastWorkout.exercises.map((e: any) => e.muscleGroup));
+    const muscleGroups = new Set<string>(lastWorkout.exercises.map((e: any) => e.muscleGroup as string));
+    const muscleGroupsArray = Array.from(muscleGroups);
     
-    return `Based on your last workout (${new Date(lastWorkout.date).toLocaleDateString()}), you trained ${Array.from(muscleGroups).join(', ')}. For optimal recovery and growth, I'd recommend hitting different muscle groups today. How about focusing on ${getSuggestedMuscleGroups(Array.from(muscleGroups))}? Aim for progressive overload - try adding 2.5-5kg or 1-2 reps from last time! 🎯`;
+    return `Based on your last workout (${new Date(lastWorkout.date).toLocaleDateString()}), you trained ${muscleGroupsArray.join(', ')}. For optimal recovery and growth, I'd recommend hitting different muscle groups today. How about focusing on ${getSuggestedMuscleGroups(muscleGroupsArray)}? Aim for progressive overload - try adding 2.5-5kg or 1-2 reps from last time! 🎯`;
   }
 
   // Nutrition advice

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
@@ -46,6 +46,15 @@ export default function AICoach() {
     }
   }
 
+  // Close on Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsOpen(false);
+    }
+    if (isOpen) window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
+
   return (
     <>
       {/* AI Coach Button */}
@@ -64,24 +73,26 @@ export default function AICoach() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            className="fixed inset-0 z-[999] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
           >
+            {/* Backdrop */}
             <motion.div
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
             />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative z-10 w-full max-w-lg sm:max-w-2xl max-h-[80vh] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col"
+              className="relative z-10 w-full max-w-lg sm:max-w-2xl max-h-[85vh] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">

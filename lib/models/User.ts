@@ -15,6 +15,7 @@ export interface IUser {
   recoveryType: 'fast' | 'moderate' | 'slow';
   streakDays: number;
   lastActive: Date;
+  onboarded?: boolean;
   settings: {
     theme: string;
     units: 'metric' | 'imperial';
@@ -37,6 +38,7 @@ const UserSchema = new Schema<IUser>({
   recoveryType: { type: String, enum: ['fast', 'moderate', 'slow'], default: 'moderate' },
   streakDays: { type: Number, default: 0 },
   lastActive: { type: Date, default: Date.now },
+  onboarded: { type: Boolean, default: false },
   settings: {
     theme: { type: String, default: 'dark' },
     units: { type: String, enum: ['metric', 'imperial'], default: 'metric' },

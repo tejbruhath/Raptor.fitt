@@ -27,6 +27,13 @@ export default function Dashboard() {
     avgCalories: 0,
     avgSleep: 0,
   });
+  const [readiness, setReadiness] = useState(0);
+  const [userOnboarded, setUserOnboarded] = useState<boolean | null>(null);
+  const [recent, setRecent] = useState({
+    workout: null as null | { time: string; metrics: string; title: string },
+    nutrition: null as null | { time: string; metrics: string; title: string },
+    recovery: null as null | { time: string; metrics: string; title: string },
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -36,9 +43,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (session?.user?.id) {
-      fetchDashboardData();
+      checkOnboarding().then((ok) => {
+        if (ok) fetchDashboardData();
+      });
     }
   }, [session]);
+
+  async function checkOnboarding() {
+    try {
+      const res = await fetch(`/api/user?userId=${session?.user?.id}`);
+      const { user } = await res.json();
+      if (!user?.onboarded) {
+        router.push('/onboarding');
+        return false;
+      }
+      setUserOnboarded(true);
+      return true;
+    } catch {
+      return true;
+    }
+  }
 
   async function fetchDashboardData() {
     try {
@@ -59,14 +83,14 @@ export default function Dashboard() {
       // Fetch strength index
       const siRes = await fetch(`/api/strength-index?userId=${userId}`);
       const { strengthIndex: siData } = await siRes.json();
-      const latestSI = siData[siData.length - 1];
+      const latestSI = siData && siData.length > 0 ? siData[siData.length - 1] : null;
 
       // Calculate stats
       const last7Days = new Date();
       last7Days.setDate(last7Days.getDate() - 7);
 
       const recentWorkouts = workouts.filter(
-        (w: any) => new Date(w.date) >= last7Days
+        (w: any) => new Date(w.date || w.createdAt) >= last7Days
       );
 
       const weeklyVolume = recentWorkouts.reduce((sum: number, w: any) => {
@@ -83,33 +107,33 @@ export default function Dashboard() {
         );
       }, 0);
 
-      const recentNutrition = nutrition.filter(
-        (n: any) => new Date(n.date) >= last7Days
+      const recentNutrition = (nutrition || []).filter(
+        (n: any) => new Date(n.date || n.createdAt) >= last7Days
       );
       const avgCalories =
         recentNutrition.length > 0
           ? recentNutrition.reduce((sum: number, n: any) => {
               return (
                 sum +
-                n.meals.reduce((mSum: number, m: any) => mSum + m.calories, 0)
+                (n.meals || []).reduce((mSum: number, m: any) => mSum + (m.calories || 0), 0)
               );
             }, 0) / recentNutrition.length
           : 0;
 
-      const recentRecovery = recovery.filter(
-        (r: any) => new Date(r.date) >= last7Days
+      const recentRecovery = (recovery || []).filter(
+        (r: any) => new Date(r.date || r.createdAt) >= last7Days
       );
       const avgSleep =
         recentRecovery.length > 0
           ? recentRecovery.reduce(
-              (sum: number, r: any) => sum + r.sleepHours,
+              (sum: number, r: any) => sum + (r.sleepHours || 0),
               0
             ) / recentRecovery.length
           : 0;
 
       // Calculate streak
       const sortedWorkouts = [...workouts].sort(
-        (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a: any, b: any) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()
       );
       let currentStreak = 0;
       let checkDate = new Date();
@@ -131,25 +155,75 @@ export default function Dashboard() {
       }
 
       // Use the latestSI already declared above
-      const previousSI = siData[siData.length - 2];
+      const previousSI = siData && siData.length > 1 ? siData[siData.length - 2] : null;
 
       setStreak(currentStreak);
       setStrengthIndex({
         value: latestSI?.totalSI || 0,
-        change: latestSI?.totalSI - (previousSI?.totalSI || 0) || 0,
+        change: latestSI && previousSI ? latestSI.totalSI - previousSI.totalSI : 0,
         trend:
-          latestSI?.totalSI - previousSI?.totalSI > 0
+          latestSI && previousSI && latestSI.totalSI - previousSI.totalSI > 0
             ? "up"
-            : latestSI?.totalSI - previousSI?.totalSI < 0
+            : latestSI && previousSI && latestSI.totalSI - previousSI.totalSI < 0
             ? "down"
             : "stable",
       });
+      const workoutsThisMonth = workouts.filter((w: any) => {
+        const d = new Date(w.date || w.createdAt);
+        const now = new Date();
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+
       setStats({
-        workouts: workouts.length,
+        workouts: workoutsThisMonth,
         weeklyVolume: Math.round(weeklyVolume),
         avgCalories: Math.round(avgCalories),
         avgSleep: Math.round(avgSleep * 10) / 10,
       });
+
+      const trendBoost = latestSI && previousSI ? (latestSI.totalSI - previousSI.totalSI > 0 ? 10 : (latestSI.totalSI - previousSI.totalSI < 0 ? -10 : 0)) : 0;
+      const readinessCalc = Math.max(0, Math.min(100, Math.round(50 + avgSleep * 5 + trendBoost)));
+      setReadiness(readinessCalc);
+      // Build recent activity
+      const lw = sortedWorkouts && sortedWorkouts.length > 0 ? sortedWorkouts[0] : null;
+      const lwVolume = lw && lw.exercises
+        ? lw.exercises.reduce((sum: number, ex: any) =>
+            sum + (ex.sets || []).reduce((s: number, set: any) => s + (set.reps || 0) * (set.weight || 0), 0), 0)
+        : 0;
+      const nn = recentNutrition.length > 0 ? recentNutrition[recentNutrition.length - 1] : (nutrition && nutrition.length > 0 ? nutrition[0] : null);
+      const rn = recentRecovery.length > 0 ? recentRecovery[recentRecovery.length - 1] : (recovery && recovery.length > 0 ? recovery[0] : null);
+
+      const timeAgo = (d: Date) => {
+        const diff = Math.max(0, Date.now() - d.getTime());
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        if (h < 24) return `${h} hours ago`;
+        const days = Math.floor(h / 24); return days === 1 ? 'Yesterday' : `${days} days ago`;
+      };
+
+      setRecent({
+        workout: lw
+          ? {
+              title: 'Workout Log',
+              time: timeAgo(new Date(lw.date || lw.createdAt)),
+              metrics: `${lw.exercises?.length || 0} exercises • ${Math.round(lwVolume).toLocaleString()} kg volume`,
+            }
+          : null,
+        nutrition: nn
+          ? {
+              title: 'Nutrition Log',
+              time: timeAgo(new Date(nn.date || nn.createdAt)),
+              metrics: `${nn.totalCalories || nn.meals?.reduce((s: number, m: any) => s + (m.calories||0), 0)} cal • ${nn.totalProtein || 0}g protein`,
+            }
+          : null,
+        recovery: rn
+          ? {
+              title: 'Recovery Log',
+              time: timeAgo(new Date(rn.date || rn.createdAt)),
+              metrics: `${rn.sleepHours}h sleep • Quality: ${rn.sleepQuality}/10`,
+            }
+          : null,
+      });
+
       setLoading(false);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -214,29 +288,29 @@ export default function Dashboard() {
               <QuickStats
                 icon={<Activity className="w-6 h-6" />}
                 label="Workouts"
-                value="23"
+                value={`${stats.workouts}`}
                 subtext="this month"
                 color="primary"
               />
               <QuickStats
                 icon={<Apple className="w-6 h-6" />}
-                label="Nutrition"
-                value="92%"
-                subtext="on target"
+                label="Calories"
+                value={`${stats.avgCalories}`}
+                subtext="avg/day"
                 color="positive"
               />
               <QuickStats
                 icon={<Moon className="w-6 h-6" />}
                 label="Recovery"
-                value="8.2h"
+                value={`${stats.avgSleep}h`}
                 subtext="avg sleep"
                 color="secondary"
               />
               <QuickStats
                 icon={<Zap className="w-6 h-6" />}
                 label="Readiness"
-                value="87%"
-                subtext="train hard"
+                value={`${readiness}%`}
+                subtext={readiness > 70 ? "train hard" : readiness > 50 ? "steady" : "deload"}
                 color="warning"
               />
             </div>
@@ -249,15 +323,12 @@ export default function Dashboard() {
             transition={{ delay: 0.3 }}
             className="mt-8 max-w-2xl mx-auto"
           >
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-              <p className="text-sm text-primary font-semibold mb-1">
-                💡 Today's Insight
-              </p>
-              <p className="text-muted">
-                Your bench volume is up 12% this week. Keep protein above 160g to
-                maintain growth rate.
-              </p>
-            </div>
+            {stats.weeklyVolume > 0 && (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <p className="text-sm text-primary font-semibold mb-1">💡 Today's Insight</p>
+                <p className="text-muted">Weekly volume: {stats.weeklyVolume.toLocaleString()} kg. Aim for protein ≥ 1.6g/kg bodyweight.</p>
+              </div>
+            )}
           </motion.div>
         </motion.section>
 
@@ -297,35 +368,42 @@ export default function Dashboard() {
           />
         </motion.section>
 
-        {/* Recent Activity */}
+        {/* Recent Activity (real data) */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="card"
         >
-          <h2 className="text-2xl font-heading font-bold mb-6">
-            Recent Activity
-          </h2>
+          <h2 className="text-2xl font-heading font-bold mb-6">Recent Activity</h2>
           <div className="space-y-4">
-            <ActivityItem
-              type="workout"
-              title="Push Day - Upper Body"
-              time="2 hours ago"
-              metrics="12 exercises • 45 min • 8,240 kg volume"
-            />
-            <ActivityItem
-              type="nutrition"
-              title="Nutrition Log"
-              time="5 hours ago"
-              metrics="2,340 cal • 165g protein • 245g carbs"
-            />
-            <ActivityItem
-              type="recovery"
-              title="Recovery Log"
-              time="Yesterday"
-              metrics="7.5h sleep • Quality: 8/10 • Low soreness"
-            />
+            {recent.workout && (
+              <ActivityItem
+                type="workout"
+                title={recent.workout.title}
+                time={recent.workout.time}
+                metrics={recent.workout.metrics}
+              />
+            )}
+            {recent.nutrition && (
+              <ActivityItem
+                type="nutrition"
+                title={recent.nutrition.title}
+                time={recent.nutrition.time}
+                metrics={recent.nutrition.metrics}
+              />
+            )}
+            {recent.recovery && (
+              <ActivityItem
+                type="recovery"
+                title={recent.recovery.title}
+                time={recent.recovery.time}
+                metrics={recent.recovery.metrics}
+              />
+            )}
+            {!recent.workout && !recent.nutrition && !recent.recovery && (
+              <p className="text-muted text-center py-8">No recent activity. Start logging!</p>
+            )}
           </div>
         </motion.section>
       </main>
