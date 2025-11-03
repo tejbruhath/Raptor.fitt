@@ -1,0 +1,9 @@
+<svg width="1024" height="600" viewBox="0 0 1024 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Raptor R Logo with speed lines -->
+  <path d="M175 272L305 272C305 272 320 272 320 287C320 302 305 302 305 302L245 302L175 402L175 272Z" fill="#14F1C0"/>
+  <path d="M175 320L220 320L175 380L175 320Z" fill="#14F1C0"/>
+  <path d="M175 340L200 340L175 370L175 340Z" fill="#14F1C0"/>
+  
+  <!-- RAPTOR.FITT Text -->
+  <text x="340" y="370" font-family="Arial, sans-serif" font-size="96" font-weight="900" fill="#14F1C0" letter-spacing="8">RAPTOR.FITT</text>
+</svg>

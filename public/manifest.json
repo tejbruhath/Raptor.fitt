@@ -1,0 +1,11 @@
+{
+  "name": "Raptor.fitt - Hunt Your Potential",
+  "short_name": "Raptor.fitt",
+  "description": "The Intelligence Layer for Your Body. Track. Train. Transform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#14F1C0",
+  "orientation": "portrait",
+  "categories": ["health", "fitness", "lifestyle"]
+}

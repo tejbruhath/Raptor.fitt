@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 10 10 10;
+    --surface: 18 18 18;
+    --primary: 20 241 192;
+    --secondary: 225 78 255;
+    --accent: 255 0 92;
+  }
+
+  * {
+    @apply border-neutral/20;
+  }
+
+  body {
+    @apply bg-background text-white;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/50;
+  }
+}
+
+@layer components {
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-surface/50 backdrop-blur-lg border border-white/10;
+  }
+
+  /* Neon glow effect */
+  .glow {
+    @apply shadow-glow;
+  }
+
+  .glow-secondary {
+    @apply shadow-glow-secondary;
+  }
+
+  .glow-accent {
+    @apply shadow-glow-accent;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+  }
+
+  /* Button base styles */
+  .btn {
+    @apply px-6 py-3 rounded-full font-semibold transition-all duration-200 active:scale-95;
+  }
+
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-primary to-primary-light text-background hover:shadow-glow;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gradient-to-r from-secondary to-secondary-light text-white hover:shadow-glow-secondary;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent border-2 border-primary text-primary hover:bg-primary/10;
+  }
+
+  /* Card styles */
+  .card {
+    @apply glass rounded-lg p-6 hover:border-primary/30 transition-all duration-300;
+  }
+
+  .card-elevated {
+    @apply card hover:translate-y-[-2px] hover:shadow-glow;
+  }
+
+  /* Input styles */
+  .input {
+    @apply w-full px-4 py-3 bg-surface border border-white/10 rounded-lg text-white placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all;
+  }
+
+  /* Progress ring */
+  .progress-ring {
+    @apply relative w-32 h-32;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply card text-center;
+  }
+
+  .stat-value {
+    @apply text-4xl font-bold font-mono gradient-text;
+  }
+
+  .stat-label {
+    @apply text-sm text-muted uppercase tracking-wide mt-2;
+  }
+
+  /* Animation utilities */
+  .animate-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+
+  .slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  /* Micro interactions */
+  .tap-scale {
+    @apply active:scale-95 transition-transform duration-100;
+  }
+
+  .hover-lift {
+    @apply hover:translate-y-[-4px] transition-transform duration-200;
+  }
+
+  /* Page transitions */
+  .page-enter {
+    animation: slideUp 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+}
+
+@layer utilities {
+  /* Custom gradient directions */
+  .gradient-radial {
+    background: radial-gradient(circle, var(--tw-gradient-stops));
+  }
+
+  .gradient-conic {
+    background: conic-gradient(var(--tw-gradient-stops));
+  }
+
+  /* Text shadows for glow effect */
+  .text-glow {
+    text-shadow: 0 0 10px rgba(20, 241, 192, 0.5);
+  }
+
+  .text-glow-secondary {
+    text-shadow: 0 0 10px rgba(225, 78, 255, 0.5);
+  }
+
+  /* Hide scrollbar */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse bg-neutral/50 rounded;
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Raptor claw pattern (subtle background) */
+.raptor-pattern {
+  background-image: linear-gradient(
+      135deg,
+      rgba(20, 241, 192, 0.02) 25%,
+      transparent 25%
+    ),
+    linear-gradient(225deg, rgba(20, 241, 192, 0.02) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(20, 241, 192, 0.02) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(20, 241, 192, 0.02) 25%, transparent 25%);
+  background-position: 20px 0, 20px 0, 0 0, 0 0;
+  background-size: 40px 40px;
+  background-repeat: repeat;
+}
