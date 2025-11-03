@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA Icon Generator - Raptor.Fitt</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0A0A0A;
+      color: #fff;
+    }
+    .container {
+      background: #1A1A1A;
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid #14F1C0;
+    }
+    h1 {
+      color: #14F1C0;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #8C8C8C;
+      margin-bottom: 30px;
+    }
+    button {
+      background: #14F1C0;
+      color: #0A0A0A;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background: #10d1a7;
+    }
+    .preview {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .icon-preview {
+      background: #0A0A0A;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #333;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .success {
+      background: #22c55e;
+      color: white;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🦖 Raptor.Fitt Icon Generator</h1>
+    <p>Generate PWA icons from your SVG logo. Click the buttons below to download icons.</p>
+
+    <div>
+      <button onclick="generateIcon(192)">Generate 192x192</button>
+      <button onclick="generateIcon(512)">Generate 512x512</button>
+      <button onclick="generateIcon(180, 'apple-touch-icon')">Generate 180x180 (Apple)</button>
+      <button onclick="generateAll()">Generate All</button>
+    </div>
+
+    <div class="success" id="success">✅ Icons generated! Check your downloads folder.</div>
+
+    <div class="preview" id="preview"></div>
+  </div>
+
+  <script>
+    // Raptor.Fitt SVG Logo (simplified)
+    const svgContent = `
+      <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background circle -->
+        <circle cx="256" cy="256" r="240" fill="#0A0A0A"/>
+        
+        <!-- Raptor head outline -->
+        <path d="M 200 180 Q 220 150, 280 150 Q 320 150, 340 180 L 350 220 Q 360 260, 340 300 L 320 340 Q 300 370, 256 380 Q 212 370, 192 340 L 172 300 Q 152 260, 162 220 Z" 
+              fill="#14F1C0" stroke="#14F1C0" stroke-width="3"/>
+        
+        <!-- Eye -->
+        <circle cx="240" cy="200" r="12" fill="#0A0A0A"/>
+        <circle cx="240" cy="200" r="6" fill="#14F1C0"/>
+        
+        <!-- Teeth marks (aggressive) -->
+        <path d="M 220 280 L 230 300 L 240 280 L 250 300 L 260 280 L 270 300 L 280 280" 
+              stroke="#0A0A0A" stroke-width="4" fill="none" stroke-linecap="round"/>
+        
+        <!-- Highlight/shine -->
+        <path d="M 280 160 Q 310 170, 320 200" 
+              stroke="rgba(255,255,255,0.3)" stroke-width="6" fill="none" stroke-linecap="round"/>
+        
+        <!-- Text accent -->
+        <text x="256" y="450" font-family="Arial, sans-serif" font-size="48" font-weight="bold" 
+              fill="#14F1C0" text-anchor="middle">RAPTOR</text>
+      </svg>
+    `;
+
+    function generateIcon(size, filename = null) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Create SVG image
+      const svg = new Blob([svgContent], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(svg);
+      const img = new Image();
+
+      img.onload = function() {
+        // Draw with background
+        ctx.fillStyle = '#0A0A0A';
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, 0, 0, size, size);
+
+        // Show preview
+        const previewDiv = document.getElementById('preview');
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'icon-preview';
+        iconDiv.innerHTML = `
+          <h3>${size}x${size}</h3>
+          <canvas width="${size}" height="${size}"></canvas>
+          <p>${filename || `icon-${size}x${size}.png`}</p>
+        `;
+        const previewCanvas = iconDiv.querySelector('canvas');
+        const previewCtx = previewCanvas.getContext('2d');
+        previewCtx.drawImage(canvas, 0, 0);
+        previewDiv.appendChild(iconDiv);
+
+        // Download
+        canvas.toBlob(function(blob) {
+          const link = document.createElement('a');
+          link.download = filename || `icon-${size}x${size}.png`;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          
+          document.getElementById('success').style.display = 'block';
+        });
+
+        URL.revokeObjectURL(url);
+      };
+
+      img.src = url;
+    }
+
+    function generateAll() {
+      generateIcon(192);
+      setTimeout(() => generateIcon(512), 500);
+      setTimeout(() => generateIcon(180, 'apple-touch-icon.png'), 1000);
+    }
+  </script>
+</body>
+</html>

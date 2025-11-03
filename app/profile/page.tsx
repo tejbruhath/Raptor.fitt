@@ -16,6 +16,15 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [measurements, setMeasurements] = useState({
+    chest: 0,
+    waist: 0,
+    arms: 0,
+    thighs: 0,
+    calves: 0,
+    shoulders: 0,
+  });
+  const [editingMeasurements, setEditingMeasurements] = useState(false);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -111,6 +120,22 @@ export default function Profile() {
 
   async function handleLogout() {
     await signOut({ callbackUrl: "/auth/signin" });
+  }
+
+  async function saveMeasurements() {
+    try {
+      await fetch('/api/user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: session?.user?.id, 
+          measurements 
+        }),
+      });
+      setEditingMeasurements(false);
+    } catch (error) {
+      console.error('Failed to save measurements:', error);
+    }
   }
 
   if (status === "loading" || loading) {
@@ -220,6 +245,43 @@ export default function Profile() {
               <p className="text-sm text-muted mb-1">Training Age</p>
               <p className="text-2xl font-bold font-mono">{userData?.trainingAge || 0} years</p>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Body Measurements */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="card"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-heading font-bold">Body Measurements</h3>
+            <button
+              onClick={() => editingMeasurements ? saveMeasurements() : setEditingMeasurements(true)}
+              className="btn-ghost text-sm"
+            >
+              {editingMeasurements ? 'Save' : 'Edit'}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {Object.entries(measurements).map(([key, value]) => (
+              <div key={key}>
+                <p className="text-sm text-muted mb-1 capitalize">{key}</p>
+                {editingMeasurements ? (
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={value || ''}
+                    onChange={(e) => setMeasurements({ ...measurements, [key]: Number(e.target.value) })}
+                    className="input text-center"
+                    placeholder="0"
+                  />
+                ) : (
+                  <p className="text-xl font-bold font-mono">{value || 0} cm</p>
+                )}
+              </div>
+            ))}
           </div>
         </motion.div>
 

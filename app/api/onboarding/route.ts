@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/lib/models/User';
+import StrengthIndex from '@/lib/models/StrengthIndex';
+import { calculateStrengthIndexFrom1RMs } from '@/lib/strengthIndex';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +48,33 @@ export async function POST(request: NextRequest) {
     user.onboarded = true;
 
     await user.save();
+
+    // Calculate initial SI from 1RM values if provided
+    if (benchPress1RM || squat1RM || deadlift1RM) {
+      try {
+        const currentBW = bodyweight || user.bodyweight?.[user.bodyweight.length - 1] || 70;
+        const { totalSI, breakdown } = calculateStrengthIndexFrom1RMs({
+          benchPress1RM: benchPress1RM || 0,
+          squat1RM: squat1RM || 0,
+          deadlift1RM: deadlift1RM || 0,
+        }, currentBW);
+
+        // Create initial SI snapshot
+        await StrengthIndex.create({
+          userId,
+          date: new Date(),
+          totalSI,
+          breakdown,
+          change: 0,
+          changePercent: 0,
+        });
+
+        console.log('✅ Initial SI calculated from onboarding:', totalSI);
+      } catch (siError) {
+        console.error('Failed to calculate initial SI:', siError);
+        // Don't fail onboarding if SI calculation fails
+      }
+    }
 
     return NextResponse.json({ message: 'Onboarding complete', user }, { status: 200 });
   } catch (error) {

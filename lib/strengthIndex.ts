@@ -364,6 +364,56 @@ export function calculateFatigueAdjustment(
   return Math.max(0.5, Math.min(1.0, adjustment)); // Clamp between 0.5 and 1.0
 }
 
+/**
+ * Calculate initial SI from 1RM values provided during onboarding
+ */
+export function calculateStrengthIndexFrom1RMs(
+  oneRMs: {
+    benchPress1RM?: number;
+    squat1RM?: number;
+    deadlift1RM?: number;
+  },
+  bodyweight: number
+): { totalSI: number; breakdown: Record<string, number> } {
+  let totalSI = 50; // Base SI
+  const breakdown: Record<string, number> = {};
+
+  // Calculate SI from bench press 1RM
+  if (oneRMs.benchPress1RM && oneRMs.benchPress1RM > 0) {
+    const benchDef = COMPOUND_EXERCISES['bench press'];
+    const progress = Math.max(0, oneRMs.benchPress1RM - benchDef.startWeight);
+    const siEarned = progress / benchDef.increment;
+    const benchSI = Math.min(siEarned, benchDef.maxSI);
+    breakdown['Bench Press'] = benchSI;
+    totalSI += benchSI;
+  }
+
+  // Calculate SI from squat 1RM
+  if (oneRMs.squat1RM && oneRMs.squat1RM > 0) {
+    const squatDef = COMPOUND_EXERCISES['squat'];
+    const progress = Math.max(0, oneRMs.squat1RM - squatDef.startWeight);
+    const siEarned = progress / squatDef.increment;
+    const squatSI = Math.min(siEarned, squatDef.maxSI);
+    breakdown['Squat'] = squatSI;
+    totalSI += squatSI;
+  }
+
+  // Calculate SI from deadlift 1RM
+  if (oneRMs.deadlift1RM && oneRMs.deadlift1RM > 0) {
+    const deadliftDef = COMPOUND_EXERCISES['deadlift'];
+    const progress = Math.max(0, oneRMs.deadlift1RM - deadliftDef.startWeight);
+    const siEarned = progress / deadliftDef.increment;
+    const deadliftSI = Math.min(siEarned, deadliftDef.maxSI);
+    breakdown['Deadlift'] = deadliftSI;
+    totalSI += deadliftSI;
+  }
+
+  // Cap at 250 (elite natural)
+  totalSI = Math.min(totalSI, 250);
+
+  return { totalSI, breakdown };
+}
+
 export function predictGrowthCurve(
   historicalSI: { date: Date; value: number }[],
   daysAhead: number = 30

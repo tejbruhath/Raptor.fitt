@@ -1,11 +1,27 @@
 {
-  "name": "Raptor.fitt - Hunt Your Potential",
-  "short_name": "Raptor.fitt",
+  "name": "Raptor.Fitt - Hunt Your Potential",
+  "short_name": "Raptor.Fitt",
   "description": "The Intelligence Layer for Your Body. Track. Train. Transform.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A0A0A",
   "theme_color": "#14F1C0",
   "orientation": "portrait",
-  "categories": ["health", "fitness", "lifestyle"]
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    {
+      "src": "/raptor-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "1170x2532",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
 }

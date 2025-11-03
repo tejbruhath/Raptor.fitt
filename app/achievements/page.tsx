@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Trophy, Lock } from "lucide-react";
 import Link from "next/link";
-import { ACHIEVEMENTS } from "@/lib/constants/achievements";
+import AchievementBadge, { ACHIEVEMENTS } from "@/components/AchievementBadge";
+import StreakCalendar from "@/components/StreakCalendar";
 
 export default function Achievements() {
   const { data: session, status } = useSession();
@@ -14,6 +15,9 @@ export default function Achievements() {
   const [loading, setLoading] = useState(true);
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
   const [prs, setPRs] = useState<any[]>([]);
+  const [workoutDates, setWorkoutDates] = useState<string[]>([]);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -42,6 +46,42 @@ export default function Achievements() {
       setPRs(prAchievements.sort((a: any, b: any) => 
         new Date(b.unlockedAt).getTime() - new Date(a.unlockedAt).getTime()
       ));
+
+      // Fetch workouts for streak data
+      const workoutsRes = await fetch(`/api/workouts?userId=${userId}`);
+      if (workoutsRes.ok) {
+        const { workouts } = await workoutsRes.json();
+        const dates = workouts.map((w: any) => w.date);
+        setWorkoutDates(dates);
+        
+        // Calculate streaks
+        const sorted = workouts.sort((a: any, b: any) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        
+        let current = 0;
+        let longest = 0;
+        let tempStreak = 0;
+        let lastDate = new Date();
+        
+        for (const workout of sorted) {
+          const wDate = new Date(workout.date);
+          const diffDays = Math.floor((lastDate.getTime() - wDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays <= 1) {
+            tempStreak++;
+            if (current === 0) current = tempStreak;
+          } else {
+            if (tempStreak > longest) longest = tempStreak;
+            tempStreak = 0;
+          }
+          lastDate = wDate;
+        }
+        
+        setCurrentStreak(current);
+        setLongestStreak(Math.max(longest, current));
+      }
+
       setLoading(false);
     } catch (error) {
       console.error("Failed to fetch achievements:", error);
@@ -136,65 +176,26 @@ export default function Achievements() {
           </div>
         )}
 
-        {/* Unlocked */}
-        {unlocked.length > 0 && (
-          <div>
-            <h2 className="text-xl font-heading font-bold mb-4">Unlocked</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {unlocked.map((ach, index) => (
-                <motion.div
-                  key={ach.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="card bg-gradient-to-br from-primary/10 to-secondary/10 border-2 border-primary/30"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="text-4xl">{ach.icon}</div>
-                    <div className="flex-1">
-                      <h3 className="font-heading font-bold text-lg mb-1">
-                        {ach.title}
-                      </h3>
-                      <p className="text-sm text-muted">{ach.description}</p>
-                      <div className="mt-2 inline-block px-3 py-1 bg-primary/20 rounded-full text-xs font-mono text-primary">
-                        {ach.category}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Streak Calendar */}
+        <StreakCalendar
+          workoutDates={workoutDates}
+          currentStreak={currentStreak}
+          longestStreak={longestStreak}
+        />
 
-        {/* Locked */}
+        {/* All Achievements */}
         <div>
-          <h2 className="text-xl font-heading font-bold mb-4">Locked</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {locked.map((ach, index) => (
-              <motion.div
+          <h2 className="text-xl font-heading font-bold mb-4">All Achievements</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {ACHIEVEMENTS.map((ach) => (
+              <AchievementBadge
                 key={ach.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.05 }}
-                className="card opacity-50"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="text-4xl grayscale">{ach.icon}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-heading font-bold text-lg">
-                        {ach.title}
-                      </h3>
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <p className="text-sm text-muted">{ach.description}</p>
-                    <div className="mt-2 inline-block px-3 py-1 bg-surface rounded-full text-xs font-mono text-muted">
-                      {ach.category}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                icon={ach.icon}
+                title={ach.title}
+                description={ach.description}
+                earned={unlockedIds.has(ach.id)}
+                rarity={ach.rarity}
+              />
             ))}
           </div>
         </div>

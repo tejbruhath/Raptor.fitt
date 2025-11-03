@@ -3,6 +3,7 @@ import { Inter, Space_Mono, Urbanist } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import NavbarWrapper from "@/components/NavbarWrapper";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,18 +26,30 @@ const urbanist = Urbanist({
 });
 
 export const metadata: Metadata = {
-  title: 'Raptor.fitt - Hunt Your Potential',
-  description: 'The Intelligence Layer for Your Body',
+  title: 'Raptor.Fitt - Hunt Your Potential',
+  description: 'The Intelligence Layer for Your Body. Track. Train. Transform.',
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Raptor.fitt",
+    title: "Raptor.Fitt",
   },
+  icons: {
+    icon: [
+      { url: '/raptor-logo.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/raptor-logo.svg', type: 'image/svg+xml' },
+    ],
+  },
+  applicationName: 'Raptor.Fitt',
+  keywords: ['fitness', 'workout', 'strength', 'training', 'progressive overload', 'gym'],
 };
 
 export const viewport = {
-  themeColor: "#0A0A0A",
+  themeColor: "#14F1C0",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -53,6 +66,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <NavbarWrapper />
+          <PWAInstallPrompt />
         </Providers>
       </body>
     </html>

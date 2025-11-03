@@ -3,9 +3,13 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Plus, Trash2, Save } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Trash2, Save, X, Minus, Check, Timer, Calculator } from "lucide-react";
 import Link from "next/link";
+import DatePicker from "@/components/DatePicker";
+import { MUSCLE_GROUP_EXERCISES, MUSCLE_GROUP_COLORS } from "@/lib/exerciseDatabase";
+import RestTimer from "@/components/RestTimer";
+import PlateCalculator from "@/components/PlateCalculator";
 
 interface Set {
   reps: number;
@@ -20,17 +24,31 @@ interface Exercise {
   sets: Set[];
 }
 
+type MuscleGroup = 'chest' | 'back' | 'legs' | 'shoulders' | 'arms';
+
 export default function LogWorkout() {
   const { data: session } = useSession();
   const router = useRouter();
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [currentExercise, setCurrentExercise] = useState({
-    name: "",
-    muscleGroup: "chest",
-  });
   const [saving, setSaving] = useState(false);
   const [loadingLastWorkout, setLoadingLastWorkout] = useState(false);
   const [recentWorkouts, setRecentWorkouts] = useState<any[]>([]);
+  
+  // Modal states
+  const [showMuscleGroupModal, setShowMuscleGroupModal] = useState(false);
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | null>(null);
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [selectedExerciseName, setSelectedExerciseName] = useState<string>('');
+  const [showSetModal, setShowSetModal] = useState(false);
+  const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
+  const [exerciseHistory, setExerciseHistory] = useState<Record<string, Set[]>>({});
+  
+  // Utility modals
+  const [showRestTimer, setShowRestTimer] = useState(false);
+  const [showPlateCalc, setShowPlateCalc] = useState(false);
+  const [workoutNotes, setWorkoutNotes] = useState("");
+  const [exerciseSearch, setExerciseSearch] = useState("");
 
   async function loadLastWorkout() {
     try {
@@ -83,25 +101,93 @@ export default function LogWorkout() {
     }
   }
 
-  const muscleGroups = [
-    "chest",
-    "back",
-    "legs",
-    "shoulders",
-    "arms",
-    "core",
-  ];
+  // Load exercise history for default values
+  useEffect(() => {
+    if (session?.user?.id) {
+      loadExerciseHistory();
+    }
+  }, [session]);
 
-  const addExercise = () => {
-    if (currentExercise.name) {
-      setExercises([
-        ...exercises,
-        {
-          ...currentExercise,
-          sets: [{ reps: 0, weight: 0, rpe: 7 }],
-        },
-      ]);
-      setCurrentExercise({ name: "", muscleGroup: "chest" });
+  async function loadExerciseHistory() {
+    try {
+      const res = await fetch(`/api/workouts?userId=${session?.user?.id}`);
+      const data = await res.json();
+      if (data.workouts) {
+        const history: Record<string, Set[]> = {};
+        data.workouts.forEach((workout: any) => {
+          workout.exercises.forEach((ex: Exercise) => {
+            if (!history[ex.name] || workout.date > history[ex.name][0]) {
+              history[ex.name] = ex.sets;
+            }
+          });
+        });
+        setExerciseHistory(history);
+      }
+    } catch (error) {
+      console.error("Failed to load exercise history:", error);
+    }
+  }
+
+  // Handle muscle group selection
+  const handleMuscleGroupClick = (muscleGroup: MuscleGroup) => {
+    setSelectedMuscleGroup(muscleGroup);
+    setShowExerciseModal(true);
+  };
+
+  // Handle exercise selection
+  const handleExerciseClick = (exerciseName: string) => {
+    setSelectedExerciseName(exerciseName);
+    setShowExerciseModal(false);
+    
+    // Get previous sets for this exercise or default
+    const previousSets = exerciseHistory[exerciseName] || [
+      { reps: 10, weight: 20, rpe: 7, isPR: false }
+    ];
+    
+    setCurrentExercise({
+      name: exerciseName,
+      muscleGroup: selectedMuscleGroup || 'chest',
+      sets: previousSets.map(s => ({ ...s, isPR: false })),
+    });
+    setShowSetModal(true);
+  };
+
+  // Save exercise to workout
+  const saveExerciseToWorkout = () => {
+    if (currentExercise) {
+      setExercises([...exercises, currentExercise]);
+      setShowSetModal(false);
+      setCurrentExercise(null);
+      setSelectedMuscleGroup(null);
+    }
+  };
+
+  // Add set to current exercise
+  const addSetToCurrentExercise = () => {
+    if (currentExercise && currentExercise.sets.length > 0) {
+      const lastSet = currentExercise.sets[currentExercise.sets.length - 1];
+      setCurrentExercise({
+        ...currentExercise,
+        sets: [...currentExercise.sets, { ...lastSet, isPR: false }],
+      });
+    }
+  };
+
+  // Update current exercise set
+  const updateCurrentSet = (setIndex: number, field: keyof Set, value: number | boolean) => {
+    if (currentExercise) {
+      const newSets = [...currentExercise.sets];
+      (newSets[setIndex] as any)[field] = value;
+      setCurrentExercise({ ...currentExercise, sets: newSets });
+    }
+  };
+
+  // Increment/decrement weight
+  const adjustWeight = (setIndex: number, delta: number) => {
+    if (currentExercise) {
+      const newSets = [...currentExercise.sets];
+      newSets[setIndex].weight = Math.max(0, newSets[setIndex].weight + delta);
+      setCurrentExercise({ ...currentExercise, sets: newSets });
     }
   };
 
@@ -145,8 +231,9 @@ export default function LogWorkout() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: session.user.id,
-          date: new Date().toISOString(),
+          date: new Date(date).toISOString(),
           exercises,
+          notes: workoutNotes,
         }),
       });
 
@@ -207,14 +294,30 @@ export default function LogWorkout() {
             ← Back
           </Link>
           <h1 className="text-2xl font-heading font-bold">Log Workout</h1>
-          <button
-            onClick={saveWorkout}
-            className="btn-primary text-sm px-4 py-2 flex items-center gap-2"
-            disabled={exercises.length === 0 || saving}
-          >
-            <Save className="w-4 h-4 inline mr-2" />
-            Save
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowRestTimer(true)}
+              className="p-2 hover:bg-primary/20 rounded-lg transition-colors"
+              title="Rest Timer"
+            >
+              <Timer className="w-5 h-5 text-primary" />
+            </button>
+            <button
+              onClick={() => setShowPlateCalc(true)}
+              className="p-2 hover:bg-primary/20 rounded-lg transition-colors"
+              title="Plate Calculator"
+            >
+              <Calculator className="w-5 h-5 text-warning" />
+            </button>
+            <button
+              onClick={saveWorkout}
+              className="btn-primary text-sm px-4 py-2 flex items-center gap-2"
+              disabled={exercises.length === 0 || saving}
+            >
+              <Save className="w-4 h-4 inline mr-2" />
+              Save
+            </button>
+          </div>
         </div>
       </header>
 
@@ -232,44 +335,51 @@ export default function LogWorkout() {
           </div>
         )}
 
-        {/* Add Exercise Form */}
+        {/* Date Picker */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="card"
         >
-          <h2 className="text-xl font-heading font-bold mb-4">Add Exercise</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input
-              type="text"
-              placeholder="Exercise name..."
-              value={currentExercise.name}
-              onChange={(e) =>
-                setCurrentExercise({ ...currentExercise, name: e.target.value })
-              }
-              className="input md:col-span-2"
-            />
-            <select
-              value={currentExercise.muscleGroup}
-              onChange={(e) =>
-                setCurrentExercise({
-                  ...currentExercise,
-                  muscleGroup: e.target.value,
-                })
-              }
-              className="input"
-            >
-              {muscleGroups.map((group) => (
-                <option key={group} value={group}>
-                  {group.charAt(0).toUpperCase() + group.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button onClick={addExercise} className="btn-primary mt-4 w-full">
-            <Plus className="w-5 h-5 inline mr-2" />
-            Add Exercise
-          </button>
+          <h2 className="text-xl font-heading font-bold mb-4">Workout Date</h2>
+          <DatePicker value={date} onChange={setDate} label="Select Date" />
+        </motion.div>
+
+        {/* Muscle Group Selection Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 md:grid-cols-5 gap-3"
+        >
+          {(Object.keys(MUSCLE_GROUP_EXERCISES) as MuscleGroup[]).map((muscleGroup) => {
+            const colors = MUSCLE_GROUP_COLORS[muscleGroup];
+            return (
+              <button
+                key={muscleGroup}
+                onClick={() => handleMuscleGroupClick(muscleGroup)}
+                className={`card p-8 text-center transition-all hover:scale-105 bg-gradient-to-br ${colors.bg} border ${colors.border} hover:${colors.glow}`}
+              >
+                <p className={`font-heading font-extrabold text-2xl capitalize ${colors.text}`}>
+                  {muscleGroup}
+                </p>
+              </button>
+            );
+          })}
+        </motion.div>
+
+        {/* Workout Notes */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card"
+        >
+          <h3 className="text-lg font-heading font-bold mb-3">Workout Notes</h3>
+          <textarea
+            value={workoutNotes}
+            onChange={(e) => setWorkoutNotes(e.target.value)}
+            className="input w-full min-h-[100px] resize-y"
+            placeholder="How did today's workout feel? Any PRs or observations..."
+          />
         </motion.div>
 
         {/* Exercises List */}
@@ -386,11 +496,12 @@ export default function LogWorkout() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-12"
+            className="card text-center py-12"
           >
-            <p className="text-muted text-lg">No exercises added yet</p>
+            <div className="text-6xl mb-4">💪</div>
+            <p className="text-muted text-lg font-semibold">No exercises added yet</p>
             <p className="text-muted text-sm mt-2">
-              Start adding exercises to log your workout
+              Tap a muscle group above to get started
             </p>
           </motion.div>
         )}
@@ -422,6 +533,201 @@ export default function LogWorkout() {
           )}
         </motion.div>
       </main>
+
+      {/* Exercise Selection Modal */}
+      <AnimatePresence>
+        {showExerciseModal && selectedMuscleGroup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
+            onClick={() => setShowExerciseModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="card max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="mb-4 pb-4 border-b border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-heading font-bold capitalize">
+                    {selectedMuscleGroup} Exercises
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowExerciseModal(false);
+                      setExerciseSearch("");
+                    }}
+                    className="text-muted hover:text-white"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search exercises..."
+                  value={exerciseSearch}
+                  onChange={(e) => setExerciseSearch(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                {MUSCLE_GROUP_EXERCISES[selectedMuscleGroup]
+                  .filter(exercise => 
+                    exercise.toLowerCase().includes(exerciseSearch.toLowerCase())
+                  )
+                  .map((exercise) => (
+                  <button
+                    key={exercise}
+                    onClick={() => handleExerciseClick(exercise)}
+                    className="w-full text-left p-4 rounded-lg bg-surface hover:bg-primary/20 transition-all border border-transparent hover:border-primary/30"
+                  >
+                    <p className="font-semibold">{exercise}</p>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Set Entry Modal */}
+      <AnimatePresence>
+        {showSetModal && currentExercise && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
+            onClick={() => {
+              setShowSetModal(false);
+              setCurrentExercise(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="card max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+                <div>
+                  <h2 className="text-2xl font-heading font-bold">{currentExercise.name}</h2>
+                  <p className="text-sm text-muted capitalize">{currentExercise.muscleGroup}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSetModal(false);
+                    setCurrentExercise(null);
+                  }}
+                  className="text-muted hover:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                {currentExercise.sets.map((set, setIndex) => (
+                  <div key={setIndex} className="p-4 bg-surface/50 rounded-lg space-y-3">
+                    <p className="font-bold text-primary">Set {setIndex + 1}</p>
+                    
+                    {/* Weight Control */}
+                    <div>
+                      <label className="text-sm text-muted mb-2 block">Weight (kg)</label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => adjustWeight(setIndex, -2.5)}
+                          className="p-2 bg-surface rounded-lg hover:bg-primary/20"
+                        >
+                          <Minus className="w-5 h-5" />
+                        </button>
+                        <input
+                          type="number"
+                          step="2.5"
+                          value={set.weight}
+                          onChange={(e) => updateCurrentSet(setIndex, 'weight', Number(e.target.value))}
+                          className="input flex-1 text-center text-xl font-bold font-mono"
+                        />
+                        <button
+                          onClick={() => adjustWeight(setIndex, 2.5)}
+                          className="p-2 bg-surface rounded-lg hover:bg-primary/20"
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Reps */}
+                    <div>
+                      <label className="text-sm text-muted mb-2 block">Reps</label>
+                      <input
+                        type="number"
+                        value={set.reps}
+                        onChange={(e) => updateCurrentSet(setIndex, 'reps', Number(e.target.value))}
+                        className="input w-full text-center text-lg font-mono"
+                      />
+                    </div>
+
+                    {/* RPE */}
+                    <div>
+                      <label className="text-sm text-muted mb-2 block">RPE (1-10)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={set.rpe || 7}
+                        onChange={(e) => updateCurrentSet(setIndex, 'rpe', Number(e.target.value))}
+                        className="input w-full text-center"
+                      />
+                    </div>
+
+                    {/* PR Toggle */}
+                    <button
+                      onClick={() => updateCurrentSet(setIndex, 'isPR', !set.isPR)}
+                      className={`w-full p-3 rounded-lg font-semibold transition-all ${
+                        set.isPR
+                          ? 'bg-warning text-background'
+                          : 'bg-surface hover:bg-neutral text-muted'
+                      }`}
+                    >
+                      {set.isPR ? '🏆 Personal Record!' : 'Mark as PR'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                <button
+                  onClick={addSetToCurrentExercise}
+                  className="btn-ghost w-full"
+                >
+                  <Plus className="w-5 h-5 inline mr-2" />
+                  Add Another Set
+                </button>
+                <button
+                  onClick={saveExerciseToWorkout}
+                  className="btn-primary w-full text-lg py-4"
+                >
+                  <Check className="w-6 h-6 inline mr-2" />
+                  Save Exercise
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Rest Timer Modal */}
+      <RestTimer isOpen={showRestTimer} onClose={() => setShowRestTimer(false)} />
+
+      {/* Plate Calculator Modal */}
+      <PlateCalculator isOpen={showPlateCalc} onClose={() => setShowPlateCalc(false)} />
     </div>
   );
 }
