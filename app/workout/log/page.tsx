@@ -10,6 +10,7 @@ import DatePicker from "@/components/DatePicker";
 import { MUSCLE_GROUP_EXERCISES, MUSCLE_GROUP_COLORS } from "@/lib/exerciseDatabase";
 import RestTimer from "@/components/RestTimer";
 import PlateCalculator from "@/components/PlateCalculator";
+import WorkoutRecommendationCard from "@/components/WorkoutRecommendationCard";
 
 interface Set {
   reps: number;
@@ -49,6 +50,10 @@ export default function LogWorkout() {
   const [showPlateCalc, setShowPlateCalc] = useState(false);
   const [workoutNotes, setWorkoutNotes] = useState("");
   const [exerciseSearch, setExerciseSearch] = useState("");
+  
+  // Recommendations
+  const [exerciseRecommendation, setExerciseRecommendation] = useState<any>(null);
+  const [loadingRecommendation, setLoadingRecommendation] = useState(false);
 
   async function loadLastWorkout() {
     try {
@@ -135,7 +140,7 @@ export default function LogWorkout() {
   };
 
   // Handle exercise selection
-  const handleExerciseClick = (exerciseName: string) => {
+  const handleExerciseClick = async (exerciseName: string) => {
     setSelectedExerciseName(exerciseName);
     setShowExerciseModal(false);
     
@@ -150,6 +155,25 @@ export default function LogWorkout() {
       sets: previousSets.map(s => ({ ...s, isPR: false })),
     });
     setShowSetModal(true);
+    
+    // Fetch recommendation for this exercise
+    if (session?.user?.id) {
+      setLoadingRecommendation(true);
+      try {
+        const res = await fetch(`/api/recommendations?userId=${session.user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          const rec = data.exerciseRecommendations?.find(
+            (r: any) => r.exercise === exerciseName
+          );
+          setExerciseRecommendation(rec || null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch recommendation:', error);
+      } finally {
+        setLoadingRecommendation(false);
+      }
+    }
   };
 
   // Save exercise to workout
@@ -606,6 +630,7 @@ export default function LogWorkout() {
             onClick={() => {
               setShowSetModal(false);
               setCurrentExercise(null);
+              setExerciseRecommendation(null);
             }}
           >
             <motion.div
@@ -624,6 +649,7 @@ export default function LogWorkout() {
                   onClick={() => {
                     setShowSetModal(false);
                     setCurrentExercise(null);
+                    setExerciseRecommendation(null);
                   }}
                   className="text-muted hover:text-white"
                 >
@@ -632,6 +658,29 @@ export default function LogWorkout() {
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                {/* AI Recommendation */}
+                {loadingRecommendation && (
+                  <div className="p-4 bg-surface/50 rounded-lg animate-pulse">
+                    <div className="h-4 bg-surface rounded w-3/4 mb-2" />
+                    <div className="h-4 bg-surface rounded w-1/2" />
+                  </div>
+                )}
+                
+                {!loadingRecommendation && exerciseRecommendation && (
+                  <WorkoutRecommendationCard
+                    exercise={exerciseRecommendation.exercise}
+                    lastWeight={exerciseRecommendation.lastWeight}
+                    lastReps={exerciseRecommendation.lastReps}
+                    lastSets={currentExercise.sets.length}
+                    suggestedWeight={exerciseRecommendation.suggestedWeight}
+                    suggestedReps={exerciseRecommendation.suggestedReps}
+                    suggestedSets={currentExercise.sets.length}
+                    reasoning={exerciseRecommendation.recommendation}
+                    confidence={85}
+                  />
+                )}
+                
+                {/* Sets List */}
                 {currentExercise.sets.map((set, setIndex) => (
                   <div key={setIndex} className="p-4 bg-surface/50 rounded-lg space-y-3">
                     <p className="font-bold text-primary">Set {setIndex + 1}</p>

@@ -28,14 +28,23 @@ export default function RestTimer({ isOpen, onClose }: RestTimerProps) {
         if (Notification.permission === 'granted') {
           new Notification('Rest Complete!', {
             body: 'Time to hit your next set! 💪',
-            icon: '/icon.png',
+            icon: '/raptor-logo.svg',
           });
         }
       }
     }
 
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isRunning, seconds]);
+
+  // Cleanup when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsRunning(false);
+    }
+  }, [isOpen]);
 
   const formatTime = (secs: number) => {
     const minutes = Math.floor(secs / 60);

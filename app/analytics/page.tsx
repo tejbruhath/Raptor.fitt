@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, BarChart3, Activity, Target } from "lucide-react";
 import Link from "next/link";
 import ComparisonChart from "@/components/ComparisonChart";
+import DeloadWarningBanner from "@/components/DeloadWarningBanner";
 import {
   LineChart,
   Line,
@@ -21,6 +22,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Area,
+  ComposedChart,
 } from "recharts";
 
 type AnalyticsTab = 'overview' | 'strength' | 'volume' | 'muscle-balance' | 'trends';
@@ -51,7 +54,8 @@ export default function Analytics() {
     if (session?.user?.id) {
       fetchAnalytics();
     }
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   async function fetchAnalytics() {
     try {
@@ -116,7 +120,7 @@ export default function Analytics() {
 
       // Calculate total sets
       const totalSets = Object.values(muscleGroups).reduce((sum: number, val: any) => sum + val, 0);
-
+      
       // EXACT colors matching the legend - using the SAME colors as the dashboard cards
       const colorMap: Record<string, string> = {
         'chest': '#14F1C0',      // Cyan - matches dashboard
@@ -127,11 +131,14 @@ export default function Analytics() {
         'core': '#14B8A6',       // Teal - matches dashboard
       };
       
-      const muscleChart = Object.entries(muscleGroups).map(([name, value]) => ({
-        name: name.charAt(0).toUpperCase() + name.slice(1),
-        value: Math.round((value as number / totalSets) * 100), // Convert to percentage
-        color: colorMap[name.toLowerCase()] || '#14F1C0',
-      }));
+      // Guard against division by zero
+      const muscleChart = totalSets > 0 
+        ? Object.entries(muscleGroups).map(([name, value]) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            value: Math.round((value as number / totalSets) * 100), // Convert to percentage
+            color: colorMap[name.toLowerCase()] || '#14F1C0',
+          }))
+        : [];
       setMuscleData(muscleChart);
 
       // Calculate real stats
@@ -232,6 +239,25 @@ export default function Analytics() {
           />
         </div>
 
+        {/* Deload Warning */}
+        {growthPrediction && growthPrediction.currentSI && growthPrediction.projectedSI && (
+          (() => {
+            const expectedSI = growthPrediction.prediction.predicted[growthPrediction.prediction.predicted.length - 1]?.value || growthPrediction.projectedSI;
+            const deviation = ((expectedSI - growthPrediction.currentSI) / expectedSI) * 100;
+            
+            if (deviation > 10) {
+              return (
+                <DeloadWarningBanner
+                  currentSI={growthPrediction.currentSI}
+                  expectedSI={expectedSI}
+                  deviation={deviation}
+                />
+              );
+            }
+            return null;
+          })()
+        )}
+
         {/* Analytics Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2">
           {[
@@ -281,10 +307,19 @@ export default function Analytics() {
           {growthPrediction?.prediction ? (
             <>
               <ResponsiveContainer width="100%" height={350}>
-                <LineChart 
-                  data={growthPrediction.prediction.observed}
+                <ComposedChart 
+                  data={[
+                    ...growthPrediction.prediction.observed,
+                    ...(growthPrediction.confidence?.upper || []),
+                  ]}
                   margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
                 >
+                  <defs>
+                    <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E1E1E" />
                   <XAxis 
                     dataKey="date" 
@@ -304,9 +339,31 @@ export default function Analytics() {
                       borderRadius: "8px",
                     }}
                     labelFormatter={(date) => new Date(date).toLocaleDateString()}
-                    formatter={(value: any) => value.toFixed(1)}
+                    formatter={(value: any) => value?.toFixed ? value.toFixed(1) : value}
                   />
                   <Legend />
+                  
+                  {/* Confidence Interval - Shaded Area */}
+                  {growthPrediction.confidence?.upper && growthPrediction.confidence?.lower && (
+                    <>
+                      <Area
+                        data={growthPrediction.confidence.upper}
+                        type="monotone"
+                        dataKey="value"
+                        stroke="none"
+                        fill="url(#confidenceGradient)"
+                        name="95% Confidence"
+                      />
+                      <Area
+                        data={growthPrediction.confidence.lower}
+                        type="monotone"
+                        dataKey="value"
+                        stroke="none"
+                        fill="#0A0A0A"
+                        name=""
+                      />
+                    </>
+                  )}
                   
                   {/* Predicted (Expected) Curve - GREEN */}
                   <Line
@@ -342,7 +399,7 @@ export default function Analytics() {
                     name="Future Projection"
                     strokeDasharray="3 3"
                   />
-                </LineChart>
+                </ComposedChart>
               </ResponsiveContainer>
               
               {/* Growth Stats */}

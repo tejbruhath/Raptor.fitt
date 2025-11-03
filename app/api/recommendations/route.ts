@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Workout from '@/lib/models/Workout';
 import Recovery from '@/lib/models/Recovery';
+import { recommendNextWeight } from '@/lib/intelligence/recommendationEngine';
+import { calculateRecoveryScore } from '@/lib/intelligence/recoveryIndex';
 
 export async function GET(request: NextRequest) {
   try {

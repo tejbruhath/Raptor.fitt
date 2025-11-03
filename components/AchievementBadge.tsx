@@ -69,74 +69,29 @@ export default function AchievementBadge({
 
 // Predefined achievements list
 export const ACHIEVEMENTS = [
-  {
-    id: 'first-workout',
-    icon: 'star',
-    title: 'First Steps',
-    description: 'Complete your first workout',
-    rarity: 'common' as const,
-  },
-  {
-    id: '10-workouts',
-    icon: 'target',
-    title: 'Dedicated',
-    description: 'Complete 10 workouts',
-    rarity: 'common' as const,
-  },
-  {
-    id: '50-workouts',
-    icon: 'flame',
-    title: 'Committed',
-    description: 'Complete 50 workouts',
-    rarity: 'rare' as const,
-  },
-  {
-    id: '100-workouts',
-    icon: 'trophy',
-    title: 'Centurion',
-    description: 'Complete 100 workouts',
-    rarity: 'epic' as const,
-  },
-  {
-    id: '7-day-streak',
-    icon: 'flame',
-    title: 'Week Warrior',
-    description: 'Maintain a 7-day workout streak',
-    rarity: 'rare' as const,
-  },
-  {
-    id: '30-day-streak',
-    icon: 'zap',
-    title: 'Monthly Master',
-    description: 'Maintain a 30-day workout streak',
-    rarity: 'epic' as const,
-  },
-  {
-    id: 'first-pr',
-    icon: 'award',
-    title: 'Personal Best',
-    description: 'Set your first PR',
-    rarity: 'common' as const,
-  },
-  {
-    id: '100-si',
-    icon: 'star',
-    title: 'Intermediate',
-    description: 'Reach SI of 100',
-    rarity: 'rare' as const,
-  },
-  {
-    id: '150-si',
-    icon: 'trophy',
-    title: 'Advanced',
-    description: 'Reach SI of 150',
-    rarity: 'epic' as const,
-  },
-  {
-    id: '200-si',
-    icon: 'zap',
-    title: 'Elite',
-    description: 'Reach SI of 200',
-    rarity: 'legendary' as const,
-  },
+  // Beginner (Common)
+  { id: 'first_workout', icon: '🎯', title: 'First Steps', description: 'Complete your first workout', rarity: 'common' as const, category: 'milestone' },
+  { id: '10_workouts', icon: '⚡', title: 'Dedicated', description: '10 workouts completed', rarity: 'common' as const, category: 'milestone' },
+  { id: 'first_pr', icon: '💪', title: 'Personal Best', description: 'Hit your first PR', rarity: 'common' as const, category: 'strength' },
+  
+  // Intermediate (Rare)
+  { id: 'week_streak', icon: '🔥', title: 'Week Warrior', description: '7-day workout streak', rarity: 'rare' as const, category: 'consistency' },
+  { id: '50_workouts', icon: '🚀', title: 'Committed', description: '50 workouts completed', rarity: 'rare' as const, category: 'milestone' },
+  { id: 'si_100', icon: '📈', title: 'Intermediate', description: 'Reach SI 100', rarity: 'rare' as const, category: 'strength' },
+  { id: '5_prs', icon: '🎪', title: 'PR Hunter', description: '5 personal records', rarity: 'rare' as const, category: 'strength' },
+  
+  // Advanced (Epic)
+  { id: 'month_streak', icon: '🏆', title: 'Monthly Master', description: '30-day workout streak', rarity: 'epic' as const, category: 'consistency' },
+  { id: '100_workouts', icon: '👑', title: 'Centurion', description: '100 workouts completed', rarity: 'epic' as const, category: 'milestone' },
+  { id: 'si_150', icon: '🎖️', title: 'Advanced', description: 'Reach SI 150', rarity: 'epic' as const, category: 'strength' },
+  { id: '10_prs', icon: '⭐', title: 'PR Collector', description: '10 personal records', rarity: 'epic' as const, category: 'strength' },
+  { id: 'volume_10k', icon: '💎', title: 'Volume King', description: '10,000kg total volume', rarity: 'epic' as const, category: 'volume' },
+  
+  // Elite (Legendary)
+  { id: 'si_200', icon: '🏅', title: 'Elite', description: 'Reach SI 200', rarity: 'legendary' as const, category: 'strength' },
+  { id: 'quarter_streak', icon: '🌟', title: 'Quarter Champion', description: '90-day workout streak', rarity: 'legendary' as const, category: 'consistency' },
+  { id: '500_workouts', icon: '🦖', title: 'Apex Predator', description: '500 workouts completed', rarity: 'legendary' as const, category: 'milestone' },
+  { id: '25_prs', icon: '🔱', title: 'PR Legend', description: '25 personal records', rarity: 'legendary' as const, category: 'strength' },
+  { id: 'volume_50k', icon: '💠', title: 'Volume God', description: '50,000kg total volume', rarity: 'legendary' as const, category: 'volume' },
+  { id: 'year_streak', icon: '🌈', title: 'Year of the Raptor', description: '365-day workout streak', rarity: 'legendary' as const, category: 'consistency' },
 ];

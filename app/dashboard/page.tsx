@@ -10,6 +10,7 @@ import StrengthIndexRing from "@/components/StrengthIndexRing";
 import QuickStats from "@/components/QuickStats";
 import TodaysSummary from "@/components/TodaysSummary";
 import AICoach from "@/components/AICoach";
+import RecoveryScoreWidget from "@/components/RecoveryScoreWidget";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -334,6 +335,17 @@ export default function Dashboard() {
 
         {/* Today's Summary */}
         <TodaysSummary />
+
+        {/* Recovery Score Widget */}
+        {session?.user?.id && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <RecoveryScoreWidget userId={session.user.id} />
+          </motion.section>
+        )}
 
         {/* Quick Actions */}
         <motion.section
