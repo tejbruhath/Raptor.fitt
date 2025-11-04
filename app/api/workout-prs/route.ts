@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import WorkoutPR from '@/lib/models/WorkoutPR';
 import { estimate1RM } from '@/lib/utils/workoutParsing';
@@ -7,12 +9,11 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = session.user.id;
 
     const prs = await WorkoutPR.find({ userId })
       .sort({ achievedAt: -1 });
@@ -28,12 +29,30 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const body = await request.json();
-    const { userId, exerciseName, weight, reps, workoutId } = body;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!userId || !exerciseName || !weight || !reps) {
+    const body = await request.json();
+    const { exerciseName, weight, reps, workoutId } = body;
+    const userId = session.user.id;
+
+    // Validate required fields (allow zero weight but not null/undefined)
+    if (!userId || !exerciseName || weight == null || reps == null) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate numeric sanity
+    if (
+      typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0 ||
+      typeof reps !== 'number' || !Number.isInteger(reps) || reps <= 0
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid weight or reps' },
         { status: 400 }
       );
     }

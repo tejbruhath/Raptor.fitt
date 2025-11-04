@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import ExerciseTemplate from '@/lib/models/ExerciseTemplate';
 
@@ -6,13 +8,20 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '10');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    // Authenticate
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const searchParams = request.nextUrl.searchParams;
+    // Sanitize and clamp limit to avoid NaN -> 0 behavior in Mongoose
+    const rawLimit = searchParams.get('limit');
+    const parsedLimit = rawLimit ? Number.parseInt(rawLimit, 10) : NaN;
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.max(1, Math.min(parsedLimit, 100))
+      : 10;
+    const userId = session.user.id;
 
     const templates = await ExerciseTemplate.find({ userId })
       .sort({ lastLoggedAt: -1 })
@@ -29,8 +38,15 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
+    // Authenticate
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { userId, name, muscleGroup, weight, reps, sets } = body;
+    const { name, muscleGroup, weight, reps, sets } = body;
+    const userId = session.user.id;
 
     if (!userId || !name || !muscleGroup) {
       return NextResponse.json(

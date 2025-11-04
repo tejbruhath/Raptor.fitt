@@ -27,7 +27,6 @@ export function useOfflineQueue() {
     // Listen for online/offline events
     const handleOnline = () => {
       setIsOnline(true);
-      syncPendingItems();
     };
 
     const handleOffline = () => {
@@ -42,6 +41,17 @@ export function useOfflineQueue() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Sync pending items when coming back online or when queue changes
+  useEffect(() => {
+    if (isOnline && pendingItems.length > 0) {
+      // Fire and forget
+      (async () => {
+        await syncPendingItems();
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, pendingItems.length]);
 
   /**
    * Load pending items from localStorage

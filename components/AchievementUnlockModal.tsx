@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trophy } from "lucide-react";
+import { BADGE_ICONS } from "./AchievementBadge";
 import confetti from "canvas-confetti";
 
 interface Achievement {
@@ -115,7 +116,14 @@ export default function AchievementUnlockModal({ achievements, onClose }: Achiev
               }`}
             >
               <div className="flex items-start gap-4">
-                <div className="text-5xl">{achievement.icon}</div>
+                {(() => {
+                  const IconComp = BADGE_ICONS[achievement.icon] || Trophy;
+                  return (
+                    <div className="w-12 h-12 rounded-full bg-background/20 flex items-center justify-center">
+                      <IconComp className="w-7 h-7 text-background" />
+                    </div>
+                  );
+                })()}
                 <div className="flex-1">
                   <h3 className="text-xl font-heading font-bold text-background mb-1">
                     {achievement.title}

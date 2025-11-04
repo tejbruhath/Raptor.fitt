@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import WorkoutPR from '@/lib/models/WorkoutPR';
 
@@ -8,17 +10,14 @@ export async function GET(
 ) {
   try {
     await dbConnect();
-
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { exercise } = await params;
     const exerciseName = decodeURIComponent(exercise);
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
-
-    const pr = await WorkoutPR.findOne({ userId, exerciseName })
+    const pr = await WorkoutPR.findOne({ userId: session.user.id, exerciseName })
       .sort({ achievedAt: -1 });
 
     if (!pr) {

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import ExerciseTemplate from '@/lib/models/ExerciseTemplate';
 import Workout from '@/lib/models/Workout';
@@ -7,12 +9,12 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    // Authenticate
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = session.user.id;
 
     // Get last 3 workouts to determine muscle groups trained
     const recentWorkouts = await Workout.find({ userId })

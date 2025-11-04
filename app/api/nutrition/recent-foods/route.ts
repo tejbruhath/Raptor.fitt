@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Nutrition from '@/lib/models/Nutrition';
 
@@ -6,13 +8,20 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '10');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    // Authenticate user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const searchParams = request.nextUrl.searchParams;
+    // Sanitize and clamp limit (min 1, max 50)
+    const rawLimit = searchParams.get('limit');
+    const parsedLimit = rawLimit ? Number.parseInt(rawLimit, 10) : NaN;
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.max(1, Math.min(parsedLimit, 50))
+      : 10;
+    const userId = session.user.id;
 
     // Get recent nutrition logs
     const nutritionLogs = await Nutrition.find({ userId })

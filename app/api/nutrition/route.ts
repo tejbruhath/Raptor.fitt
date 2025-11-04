@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Nutrition from '@/lib/models/Nutrition';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    const userId = session.user.id;
     const date = searchParams.get('date');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
 
     let query: any = { userId };
     if (date) {
@@ -32,12 +35,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const body = await request.json();
-    const { userId, date, meals, waterIntake } = body;
+    const { date, meals, waterIntake } = body;
+    const userId = session.user.id;
 
-    if (!userId || !date) {
+    if (!date) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -111,13 +120,18 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const body = await request.json();
-    const { nutritionId, userId, date, meals, waterIntake } = body;
+    const { nutritionId, date, meals, waterIntake } = body;
 
-    if (!nutritionId || !userId) {
-      return NextResponse.json({ error: 'Nutrition ID and user ID required' }, { status: 400 });
+    if (!nutritionId) {
+      return NextResponse.json({ error: 'Nutrition ID required' }, { status: 400 });
     }
 
     const totals = meals?.reduce(
@@ -131,7 +145,7 @@ export async function PUT(request: NextRequest) {
     );
 
     const nutrition = await Nutrition.findOneAndUpdate(
-      { _id: nutritionId, userId },
+      { _id: nutritionId, userId: session.user.id },
       {
         $set: {
           date: date ? new Date(date) : undefined,
@@ -159,17 +173,21 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const searchParams = request.nextUrl.searchParams;
     const nutritionId = searchParams.get('id');
-    const userId = searchParams.get('userId');
 
-    if (!nutritionId || !userId) {
-      return NextResponse.json({ error: 'Nutrition ID and user ID required' }, { status: 400 });
+    if (!nutritionId) {
+      return NextResponse.json({ error: 'Nutrition ID required' }, { status: 400 });
     }
 
-    const nutrition = await Nutrition.findOne({ _id: nutritionId, userId });
+    const nutrition = await Nutrition.findOne({ _id: nutritionId, userId: session.user.id });
 
     if (!nutrition) {
       return NextResponse.json({ error: 'Nutrition log not found' }, { status: 404 });

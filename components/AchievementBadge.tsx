@@ -12,7 +12,7 @@ interface AchievementBadgeProps {
   rarity?: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
-const BADGE_ICONS: Record<string, any> = {
+export const BADGE_ICONS: Record<string, any> = {
   trophy: Trophy,
   target: Target,
   flame: Flame,

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Workout from '@/lib/models/Workout';
 import StrengthIndex from '@/lib/models/StrengthIndex';
@@ -8,14 +10,16 @@ import { workoutSchema } from '@/lib/validation/schemas';
 
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate and scope to session user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
+    const userId = session.user.id;
 
     const workouts = await Workout.find({ userId })
       .sort({ date: -1 })
@@ -30,12 +34,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate and scope to session user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const body = await request.json();
     
-    // SECURITY: Input validation
-    const validationResult = workoutSchema.safeParse(body);
+    // SECURITY: Input validation (override userId with session id before validation)
+    const payload = { ...body, userId: session.user.id };
+    const validationResult = workoutSchema.safeParse(payload);
     if (!validationResult.success) {
       return NextResponse.json(
         { error: 'Invalid input data', details: validationResult.error.errors },
@@ -94,17 +105,22 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const body = await request.json();
-    const { workoutId, userId, date, exercises, notes, duration } = body;
+    const { workoutId, date, exercises, notes, duration } = body;
 
-    if (!workoutId || !userId) {
-      return NextResponse.json({ error: 'Workout ID and user ID required' }, { status: 400 });
+    if (!workoutId) {
+      return NextResponse.json({ error: 'Workout ID required' }, { status: 400 });
     }
 
     const workout = await Workout.findOneAndUpdate(
-      { _id: workoutId, userId },
+      { _id: workoutId, userId: session.user.id },
       {
         $set: {
           date: date ? new Date(date) : undefined,
@@ -129,17 +145,21 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const searchParams = request.nextUrl.searchParams;
     const workoutId = searchParams.get('id');
-    const userId = searchParams.get('userId');
 
-    if (!workoutId || !userId) {
-      return NextResponse.json({ error: 'Workout ID and user ID required' }, { status: 400 });
+    if (!workoutId) {
+      return NextResponse.json({ error: 'Workout ID required' }, { status: 400 });
     }
 
-    const workout = await Workout.findOne({ _id: workoutId, userId });
+    const workout = await Workout.findOne({ _id: workoutId, userId: session.user.id });
 
     if (!workout) {
       return NextResponse.json({ error: 'Workout not found' }, { status: 404 });

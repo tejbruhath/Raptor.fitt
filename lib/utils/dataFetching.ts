@@ -77,7 +77,9 @@ export async function fetchUserPRs(userId: string): Promise<Record<string, numbe
  */
 export async function fetchExercisePR(userId: string, exerciseName: string): Promise<number> {
   try {
-    const response = await fetch(`/api/workout-prs/${exerciseName}?userId=${userId}`);
+    const response = await fetch(
+      `/api/workout-prs/${encodeURIComponent(exerciseName)}?userId=${encodeURIComponent(String(userId))}`
+    );
     if (!response.ok) return 0;
     const data = await response.json();
     return data.pr?.maxWeight || 0;
