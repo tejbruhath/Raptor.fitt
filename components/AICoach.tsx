@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
+import { useHoverCapability } from "@/lib/hooks/useHoverCapability";
 
 export default function AICoach() {
+  const canHover = useHoverCapability();
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai', content: string }>>([]);
@@ -59,10 +61,10 @@ export default function AICoach() {
     <>
       {/* AI Coach Button */}
       <motion.button
-        whileHover={{ scale: 1.05 }}
+        whileHover={canHover ? { scale: 1.05 } : {}}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className="relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-secondary rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all"
+        className="relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-secondary rounded-lg transition-all hover-device:hover:shadow-lg hover-device:hover:shadow-primary/50"
       >
         <Sparkles className="w-4 h-4" />
         <span className="font-medium text-sm">AI Coach</span>
@@ -109,7 +111,7 @@ export default function AICoach() {
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                  className="p-2 rounded-lg transition-colors hover-device:hover:bg-white/5"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -127,25 +129,25 @@ export default function AICoach() {
                       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
                         <button
                           onClick={() => setInput("Give me a workout plan")}
-                          className="p-3 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
+                          className="p-3 bg-white/5 rounded-lg text-sm transition-colors hover-device:hover:bg-white/10"
                         >
                           💪 Workout Plans
                         </button>
                         <button
                           onClick={() => setInput("What should I eat?")}
-                          className="p-3 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
+                          className="p-3 bg-white/5 rounded-lg text-sm transition-colors hover-device:hover:bg-white/10"
                         >
                           🍖 Nutrition Advice
                         </button>
                         <button
                           onClick={() => setInput("How do I get stronger?")}
-                          className="p-3 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
+                          className="p-3 bg-white/5 rounded-lg text-sm transition-colors hover-device:hover:bg-white/10"
                         >
                           📈 Strength Tips
                         </button>
                         <button
                           onClick={() => setInput("I need motivation")}
-                          className="p-3 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors"
+                          className="p-3 bg-white/5 rounded-lg text-sm transition-colors hover-device:hover:bg-white/10"
                         >
                           🔥 Motivation
                         </button>
@@ -204,7 +206,7 @@ export default function AICoach() {
                   <button
                     onClick={sendMessage}
                     disabled={!input.trim() || loading}
-                    className="px-6 py-3 bg-primary text-background rounded-lg hover:bg-primary-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
+                    className="px-6 py-3 bg-primary text-background rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center hover-device:hover:bg-primary-light"
                   >
                     <Send className="w-4 h-4" />
                     <span className="font-medium">Send</span>

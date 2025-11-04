@@ -95,12 +95,13 @@ export default function Dashboard() {
   async function fetchDashboardData() {
     try {
       const userId = session?.user?.id;
+      const timestamp = Date.now(); // Prevent caching
 
       const [workoutsRes, nutritionRes, recoveryRes, siRes] = await Promise.all([
-        fetch(`/api/workouts?userId=${userId}`),
-        fetch(`/api/nutrition?userId=${userId}`),
-        fetch(`/api/recovery?userId=${userId}`),
-        fetch(`/api/strength-index?userId=${userId}`),
+        fetch(`/api/workouts?userId=${userId}&t=${timestamp}`),
+        fetch(`/api/nutrition?userId=${userId}&t=${timestamp}`),
+        fetch(`/api/recovery?userId=${userId}&t=${timestamp}`),
+        fetch(`/api/strength-index?userId=${userId}&t=${timestamp}`),
       ]);
 
       const [{ workouts }, { nutrition }, { recovery }, { strengthIndex: siData }] = await Promise.all([
@@ -109,7 +110,13 @@ export default function Dashboard() {
         recoveryRes.json(),
         siRes.json(),
       ]);
-      const latestSI = siData && siData.length > 0 ? siData[siData.length - 1] : null;
+      
+      // CRITICAL: Sort SI data by date to get the actual latest value
+      const sortedSI = siData && siData.length > 0 
+        ? [...siData].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        : [];
+      const latestSI = sortedSI.length > 0 ? sortedSI[sortedSI.length - 1] : null;
+      const previousSI = sortedSI.length > 1 ? sortedSI[sortedSI.length - 2] : null;
 
       // Calculate stats
       const last7Days = new Date();
@@ -180,8 +187,7 @@ export default function Dashboard() {
         }
       }
 
-      // Use the latestSI already declared above
-      const previousSI = siData && siData.length > 1 ? siData[siData.length - 2] : null;
+      // Previous SI is now calculated above with sorting
 
       setStreak(currentStreak);
       setStrengthIndex({
@@ -323,6 +329,7 @@ export default function Dashboard() {
                 value={`${stats.workouts}`}
                 subtext="this month"
                 color="primary"
+                onClick={() => router.push('/workout/log')}
               />
               <QuickStats
                 icon={<Apple className="w-6 h-6" />}
@@ -330,6 +337,7 @@ export default function Dashboard() {
                 value={`${stats.avgCalories}`}
                 subtext="avg/day"
                 color="positive"
+                onClick={() => router.push('/nutrition/log')}
               />
               <QuickStats
                 icon={<Moon className="w-6 h-6" />}
@@ -337,6 +345,7 @@ export default function Dashboard() {
                 value={`${stats.avgSleep}h`}
                 subtext="avg sleep"
                 color="secondary"
+                onClick={() => router.push('/recovery/log')}
               />
               <QuickStats
                 icon={<Zap className="w-6 h-6" />}
@@ -344,6 +353,7 @@ export default function Dashboard() {
                 value={`${readiness}%`}
                 subtext={readiness > 70 ? "train hard" : readiness > 50 ? "steady" : "deload"}
                 color="warning"
+                onClick={() => router.push('/analytics')}
               />
             </div>
           </div>

@@ -3,10 +3,15 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Plus, Trash2, Save, Droplet } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Trash2, Save, Droplet, Sparkles } from "lucide-react";
 import Link from "next/link";
 import DatePicker from "@/components/DatePicker";
+import SmartNutritionLogger from "@/components/SmartNutritionLogger";
+import AchievementUnlockModal from "@/components/AchievementUnlockModal";
+import RecentFoodChips from "@/components/RecentFoodChips";
+import { useOfflineQueue } from "@/lib/hooks/useOfflineQueue";
+import { fetchRecentFoods } from "@/lib/utils/dataFetching";
 
 interface Meal {
   name: string;
@@ -14,30 +19,45 @@ interface Meal {
   protein: number;
   carbs: number;
   fats: number;
+  type?: 'smart' | 'manual';
+  foodName?: string;
+  quantity?: number;
+  unit?: string;
+  mealType?: string;
 }
 
 export default function LogNutrition() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { isOnline, addToQueue } = useOfflineQueue();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [waterIntake, setWaterIntake] = useState(0);
   const [meals, setMeals] = useState<Meal[]>([]);
-  const [currentMeal, setCurrentMeal] = useState<Meal>({
-    name: "",
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fats: 0,
-  });
+  const [showSmartLogger, setShowSmartLogger] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [recentFoods, setRecentFoods] = useState<any[]>([]);
+  const [favoriteFoods, setFavoriteFoods] = useState<any[]>([]);
 
   // Auto-load last nutrition log when page opens
   useEffect(() => {
     if (session?.user?.id) {
       loadLastNutrition();
+      loadRecentFoods();
     }
   }, [session]);
+
+  async function loadRecentFoods() {
+    try {
+      const foods = await fetchRecentFoods(session?.user?.id || '');
+      setRecentFoods(foods.map(f => ({ name: f })));
+      // TODO: Load favorites from user preferences
+    } catch (error) {
+      console.error('Failed to load recent foods:', error);
+    }
+  }
 
   async function loadLastNutrition() {
     try {
@@ -55,11 +75,21 @@ export default function LogNutrition() {
     }
   }
 
-  const addMeal = () => {
-    if (currentMeal.name && currentMeal.calories > 0) {
-      setMeals([...meals, currentMeal]);
-      setCurrentMeal({ name: "", calories: 0, protein: 0, carbs: 0, fats: 0 });
-    }
+  const handleSmartLog = (data: any) => {
+    const newMeal: Meal = {
+      name: data.foodName || data.mealType || 'Meal',
+      calories: data.macros.calories,
+      protein: data.macros.protein,
+      carbs: data.macros.carbs,
+      fats: data.macros.fats,
+      type: data.type,
+      foodName: data.foodName,
+      quantity: data.quantity,
+      unit: data.unit,
+      mealType: data.mealType,
+    };
+    setMeals([...meals, newMeal]);
+    setShowSmartLogger(false);
   };
 
   const removeMeal = (index: number) => {
@@ -84,19 +114,56 @@ export default function LogNutrition() {
 
     setSaving(true);
     try {
+      const nutritionData = {
+        userId: session.user.id,
+        date: new Date(date).toISOString(),
+        meals,
+        waterIntake,
+      };
+
+      if (!isOnline) {
+        // Queue for offline sync
+        addToQueue('nutrition', nutritionData);
+        alert('Saved offline. Will sync when online.');
+        router.push("/dashboard");
+        return;
+      }
+
       const response = await fetch("/api/nutrition", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: session.user.id,
-          date: new Date(date).toISOString(),
-          meals,
-          totals,
-          waterIntake,
-        }),
+        body: JSON.stringify(nutritionData),
       });
 
       if (response.ok) {
+        // Recalculate SI
+        try {
+          await fetch('/api/strength-index', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: session.user.id }),
+          });
+        } catch (e) {
+          console.warn('SI recalculation failed');
+        }
+
+        // Check for new achievements
+        try {
+          const achRes = await fetch('/api/achievements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: session.user.id }),
+          });
+          const achData = await achRes.json();
+          if (achData.newAchievements && achData.newAchievements.length > 0) {
+            setNewAchievements(achData.newAchievements);
+            setShowAchievements(true);
+            return; // Don't redirect yet
+          }
+        } catch (e) {
+          console.warn('Achievement check failed');
+        }
+
         router.push("/dashboard");
       } else {
         alert("Failed to save nutrition");
@@ -176,72 +243,56 @@ export default function LogNutrition() {
           </div>
         </motion.div>
 
-        {/* Add Meal Form */}
+        {/* Recent Foods */}
+        {(recentFoods.length > 0 || favoriteFoods.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="card"
+          >
+            <RecentFoodChips
+              recentFoods={recentFoods}
+              favoriteFoods={favoriteFoods}
+              onSelect={(food) => {
+                // Pre-fill smart logger with food name
+                setShowSmartLogger(true);
+                // Note: SmartNutritionLogger would need to accept initial value
+              }}
+            />
+          </motion.div>
+        )}
+
+        {/* Smart Add Meal Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.15 }}
           className="card"
         >
-          <h2 className="text-xl font-heading font-bold mb-4">Add Meal</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <input
-              type="text"
-              placeholder="Meal name..."
-              value={currentMeal.name}
-              onChange={(e) =>
-                setCurrentMeal({ ...currentMeal, name: e.target.value })
-              }
-              className="input md:col-span-2"
-            />
-            <input
-              type="number"
-              placeholder="Calories"
-              value={currentMeal.calories || ""}
-              onChange={(e) =>
-                setCurrentMeal({
-                  ...currentMeal,
-                  calories: Number(e.target.value),
-                })
-              }
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="Protein (g)"
-              value={currentMeal.protein || ""}
-              onChange={(e) =>
-                setCurrentMeal({
-                  ...currentMeal,
-                  protein: Number(e.target.value),
-                })
-              }
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="Carbs (g)"
-              value={currentMeal.carbs || ""}
-              onChange={(e) =>
-                setCurrentMeal({ ...currentMeal, carbs: Number(e.target.value) })
-              }
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="Fats (g)"
-              value={currentMeal.fats || ""}
-              onChange={(e) =>
-                setCurrentMeal({ ...currentMeal, fats: Number(e.target.value) })
-              }
-              className="input"
-            />
-          </div>
-          <button onClick={addMeal} className="btn-primary w-full">
-            <Plus className="w-5 h-5 inline mr-2" />
-            Add Meal
+          <button 
+            onClick={() => setShowSmartLogger(true)} 
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-5 h-5" />
+            Add Food (Smart)
           </button>
+          <p className="text-xs text-muted text-center mt-3">
+            💡 Try: "chicken 200g" or "eggs 3" for instant macros
+          </p>
         </motion.div>
+
+        {/* Smart Nutrition Logger Modal */}
+        <AnimatePresence>
+          {showSmartLogger && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <SmartNutritionLogger
+                onSave={handleSmartLog}
+                onCancel={() => setShowSmartLogger(false)}
+              />
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Meals List */}
         {meals.map((meal, index) => (
@@ -302,6 +353,20 @@ export default function LogNutrition() {
           </motion.div>
         )}
       </main>
+
+      {/* Achievement Unlock Modal */}
+      <AnimatePresence>
+        {showAchievements && newAchievements.length > 0 && (
+          <AchievementUnlockModal
+            achievements={newAchievements}
+            onClose={() => {
+              setShowAchievements(false);
+              setNewAchievements([]);
+              router.push("/dashboard");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -4,13 +4,22 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Save, X, Minus, Check, Timer, Calculator } from "lucide-react";
+import { Plus, Trash2, Save, X, Minus, Check, Timer, Calculator, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import DatePicker from "@/components/DatePicker";
 import { MUSCLE_GROUP_EXERCISES, MUSCLE_GROUP_COLORS } from "@/lib/exerciseDatabase";
 import RestTimer from "@/components/RestTimer";
 import PlateCalculator from "@/components/PlateCalculator";
 import WorkoutRecommendationCard from "@/components/WorkoutRecommendationCard";
+import { useHoverCapability } from "@/lib/hooks/useHoverCapability";
+import RecentExerciseChips from "@/components/RecentExerciseChips";
+import PRGlowInput from "@/components/PRGlowInput";
+import VolumeToast from "@/components/VolumeToast";
+import WorkoutSessionSummary from "@/components/WorkoutSessionSummary";
+import AchievementUnlockModal from "@/components/AchievementUnlockModal";
+import { useOfflineQueue } from "@/lib/hooks/useOfflineQueue";
+import { parseQuickWorkout, isQuickAddFormat, calculateTotalVolume, compareVolume } from "@/lib/utils/workoutParsing";
+import { fetchRecentExercises, fetchSuggestedExercises, fetchUserPRs } from "@/lib/utils/dataFetching";
 
 interface Set {
   reps: number;
@@ -28,13 +37,31 @@ interface Exercise {
 type MuscleGroup = 'chest' | 'back' | 'legs' | 'shoulders' | 'arms';
 
 export default function LogWorkout() {
+  const canHover = useHoverCapability();
   const { data: session } = useSession();
   const router = useRouter();
+  const { isOnline, addToQueue } = useOfflineQueue();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [saving, setSaving] = useState(false);
   const [loadingLastWorkout, setLoadingLastWorkout] = useState(false);
   const [recentWorkouts, setRecentWorkouts] = useState<any[]>([]);
+  
+  // Smart logging states
+  const [recentExercises, setRecentExercises] = useState<any[]>([]);
+  const [suggestedExercises, setSuggestedExercises] = useState<any[]>([]);
+  const [userPRs, setUserPRs] = useState<Record<string, number>>({});
+  const [showVolumeToast, setShowVolumeToast] = useState(false);
+  const [currentVolume, setCurrentVolume] = useState(0);
+  const [volumeChange, setVolumeChange] = useState(0);
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [sessionDuration, setSessionDuration] = useState<string>('0:00');
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [quickAddInput, setQuickAddInput] = useState('');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   
   // Modal states
   const [showMuscleGroupModal, setShowMuscleGroupModal] = useState(false);
@@ -91,8 +118,39 @@ export default function LogWorkout() {
   useEffect(() => {
     if (session?.user?.id) {
       fetchRecentWorkouts();
+      loadSmartData();
+      setSessionStartTime(new Date()); // Track session start
     }
   }, [session]);
+
+  // Update session duration every minute
+  useEffect(() => {
+    if (!sessionStartTime) return;
+    
+    const updateDuration = () => {
+      const now = new Date();
+      const diff = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
+      const minutes = Math.floor(diff / 60);
+      const seconds = diff % 60;
+      setSessionDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+    };
+    
+    updateDuration(); // Initial update
+    const interval = setInterval(updateDuration, 1000);
+    return () => clearInterval(interval);
+  }, [sessionStartTime]);
+
+  async function loadSmartData() {
+    if (!session?.user?.id) return;
+    const [recent, suggested, prs] = await Promise.all([
+      fetchRecentExercises(session.user.id),
+      fetchSuggestedExercises(session.user.id),
+      fetchUserPRs(session.user.id),
+    ]);
+    setRecentExercises(recent);
+    setSuggestedExercises(suggested);
+    setUserPRs(prs);
+  }
 
   async function deleteWorkout(id: string) {
     if (!session?.user?.id) return;
@@ -190,6 +248,20 @@ export default function LogWorkout() {
   // Save exercise to workout
   const saveExerciseToWorkout = () => {
     if (currentExercise) {
+      // Calculate volume for this exercise
+      const exerciseVolume = calculateTotalVolume(currentExercise.sets);
+      
+      // Show volume toast
+      setCurrentVolume(exerciseVolume);
+      setVolumeChange(0); // Could fetch previous session to compare
+      setShowVolumeToast(true);
+      
+      // Auto-hide toast after 3 seconds
+      setTimeout(() => setShowVolumeToast(false), 3000);
+      
+      // Auto-start rest timer if enabled
+      setShowRestTimer(true);
+      
       setExercises([...exercises, currentExercise]);
       setShowSetModal(false);
       setCurrentExercise(null);
@@ -261,43 +333,81 @@ export default function LogWorkout() {
 
     setSaving(true);
     try {
+      const duration = sessionStartTime ? Math.round((new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60) : undefined;
+      const workoutData = {
+        userId: session.user.id,
+        date: new Date(date).toISOString(),
+        exercises,
+        notes: workoutNotes,
+        duration,
+      };
+
+      // Offline support
+      if (!isOnline) {
+        addToQueue('workout', workoutData);
+        alert('Workout saved offline. Will sync when online.');
+        router.push("/dashboard");
+        return;
+      }
+
       const response = await fetch("/api/workouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: session.user.id,
-          date: new Date(date).toISOString(),
-          exercises,
-          notes: workoutNotes,
-        }),
+        body: JSON.stringify(workoutData),
       });
 
       if (response.ok) {
-        // Save PRs to achievements collection
-        const prs: any[] = [];
+        const data = await response.json();
+        const workoutId = data.workout?._id;
+
+        // Track PRs via new API and update exercise templates
+        const prPromises: Promise<any>[] = [];
+        const templatePromises: Promise<any>[] = [];
+        let prCount = 0;
+
         exercises.forEach((exercise) => {
-          exercise.sets.forEach((set) => {
-            if (set.isPR) {
-              prs.push({
+          // Update exercise template
+          const avgWeight = exercise.sets.reduce((sum, s) => sum + s.weight, 0) / exercise.sets.length;
+          const avgReps = exercise.sets.reduce((sum, s) => sum + s.reps, 0) / exercise.sets.length;
+          
+          templatePromises.push(
+            fetch("/api/exercise-templates", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
                 userId: session.user.id,
-                exerciseName: exercise.name,
+                name: exercise.name,
                 muscleGroup: exercise.muscleGroup,
-                weight: set.weight,
-                reps: set.reps,
-              });
+                weight: avgWeight,
+                reps: avgReps,
+                sets: exercise.sets.length,
+              }),
+            })
+          );
+
+          exercise.sets.forEach((set) => {
+            if (set.isPR || set.weight > (userPRs[exercise.name] || 0)) {
+              prCount++;
+              prPromises.push(
+                fetch("/api/workout-prs", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    userId: session.user.id,
+                    exerciseName: exercise.name,
+                    weight: set.weight,
+                    reps: set.reps,
+                    workoutId,
+                  }),
+                })
+              );
             }
           });
         });
 
-        if (prs.length > 0) {
-          await fetch("/api/achievements/pr", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prs }),
-          });
-        }
+        await Promise.all([...prPromises, ...templatePromises]);
 
-        // Trigger SI recalculation
+        // Recalculate SI
         try {
           await fetch('/api/strength-index', {
             method: 'POST',
@@ -305,10 +415,37 @@ export default function LogWorkout() {
             body: JSON.stringify({ userId: session.user.id }),
           });
         } catch (e) {
-          console.warn('SI recalculation failed or not applicable');
+          console.warn('SI recalculation failed');
         }
 
-        router.push("/dashboard");
+        // Check for new achievements
+        try {
+          const achRes = await fetch('/api/achievements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: session.user.id }),
+          });
+          const achData = await achRes.json();
+          if (achData.newAchievements && achData.newAchievements.length > 0) {
+            setNewAchievements(achData.newAchievements);
+          }
+        } catch (e) {
+          console.warn('Achievement check failed');
+        }
+
+        // Show session summary instead of redirecting
+        const totalVolume = exercises.reduce((sum, ex) => 
+          sum + calculateTotalVolume(ex.sets), 0
+        );
+
+        setSessionData({
+          exercises,
+          duration,
+          volumeChange: 0, // Could fetch and compare
+          prsAchieved: prCount,
+          recoveryTip: prCount > 2 ? '48-72h rest recommended after PRs' : 'Great session! Focus on recovery.',
+        });
+        setShowSessionSummary(true);
       } else {
         alert("Failed to save workout");
       }
@@ -325,21 +462,26 @@ export default function LogWorkout() {
       {/* Header */}
       <header className="glass border-b border-white/10 sticky top-0 z-50 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="text-primary hover:text-primary-light">
+          <Link href="/dashboard" className="text-primary hover-device:hover:text-primary-light">
             ← Back
           </Link>
-          <h1 className="text-2xl font-heading font-bold">Log Workout</h1>
+          <div className="text-center">
+            <h1 className="text-2xl font-heading font-bold">Log Workout</h1>
+            {sessionStartTime && (
+              <p className="text-xs text-primary font-mono">{sessionDuration}</p>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowRestTimer(true)}
-              className="p-2 hover:bg-primary/20 rounded-lg transition-colors"
+              className="p-2 rounded-lg transition-colors hover-device:hover:bg-primary/20"
               title="Rest Timer"
             >
               <Timer className="w-5 h-5 text-primary" />
             </button>
             <button
               onClick={() => setShowPlateCalc(true)}
-              className="p-2 hover:bg-primary/20 rounded-lg transition-colors"
+              className="p-2 rounded-lg transition-colors hover-device:hover:bg-primary/20"
               title="Plate Calculator"
             >
               <Calculator className="w-5 h-5 text-warning" />
@@ -357,18 +499,90 @@ export default function LogWorkout() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Load last workout helper */}
+        {/* Quick Actions */}
         {session?.user?.id && (
-          <div className="flex justify-end">
+          <div className="flex gap-3">
             <button
               onClick={loadLastWorkout}
               disabled={loadingLastWorkout}
-              className="btn-ghost text-sm"
+              className="btn-primary flex-1"
             >
-              {loadingLastWorkout ? "Loading previous workout..." : "Load last workout"}
+              <TrendingUp className="w-4 h-4 inline mr-2" />
+              {loadingLastWorkout ? "Loading..." : "Repeat Last Session"}
+            </button>
+            <button
+              onClick={() => setShowQuickAdd(!showQuickAdd)}
+              className="btn-ghost flex-1"
+            >
+              <Plus className="w-4 h-4 inline mr-2" />
+              Quick Add
             </button>
           </div>
         )}
+
+        {/* Quick Add Input */}
+        <AnimatePresence>
+          {showQuickAdd && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="card overflow-hidden"
+            >
+              <h3 className="text-lg font-heading font-bold mb-3">Quick Add Exercise</h3>
+              <p className="text-sm text-muted mb-3">
+                Try: "Squat 120x5x3" or "Bench 100x8"
+              </p>
+              <input
+                type="text"
+                value={quickAddInput}
+                onChange={(e) => setQuickAddInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && quickAddInput.trim()) {
+                    const parsed = parseQuickWorkout(quickAddInput);
+                    if (parsed && parsed.exerciseName) {
+                      setCurrentExercise({
+                        name: parsed.exerciseName,
+                        muscleGroup: 'legs', // Default, user can change
+                        sets: parsed.sets.map(s => ({ ...s, rpe: 7 })),
+                      });
+                      setShowSetModal(true);
+                      setQuickAddInput('');
+                      setShowQuickAdd(false);
+                    } else {
+                      alert('Invalid format. Try: "Squat 120x5x3"');
+                    }
+                  }
+                }}
+                placeholder="e.g., Squat 120x5x3"
+                className="input w-full mb-3"
+                autoFocus
+              />
+              <button
+                onClick={() => {
+                  if (quickAddInput.trim()) {
+                    const parsed = parseQuickWorkout(quickAddInput);
+                    if (parsed && parsed.exerciseName) {
+                      setCurrentExercise({
+                        name: parsed.exerciseName,
+                        muscleGroup: 'legs',
+                        sets: parsed.sets.map(s => ({ ...s, rpe: 7 })),
+                      });
+                      setShowSetModal(true);
+                      setQuickAddInput('');
+                      setShowQuickAdd(false);
+                    } else {
+                      alert('Invalid format. Try: "Squat 120x5x3"');
+                    }
+                  }
+                }}
+                className="btn-primary w-full"
+              >
+                Add Exercise
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Date Picker */}
         <motion.div
@@ -379,6 +593,35 @@ export default function LogWorkout() {
           <h2 className="text-xl font-heading font-bold mb-4">Workout Date</h2>
           <DatePicker value={date} onChange={setDate} label="Select Date" />
         </motion.div>
+
+        {/* Smart Exercise Suggestions */}
+        {(recentExercises.length > 0 || suggestedExercises.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="card"
+          >
+            <RecentExerciseChips
+              recentExercises={recentExercises}
+              suggestedExercises={suggestedExercises}
+              onSelect={(exercise) => {
+                setCurrentExercise({
+                  name: exercise.name,
+                  muscleGroup: exercise.muscleGroup,
+                  sets: exercise.lastSets
+                    ? Array(exercise.lastSets).fill(null).map(() => ({
+                        weight: exercise.lastWeight || 0,
+                        reps: exercise.lastReps || 0,
+                        rpe: 7,
+                      }))
+                    : [{ weight: 0, reps: 0, rpe: 7 }],
+                });
+                setShowSetModal(true);
+              }}
+            />
+          </motion.div>
+        )}
 
         {/* Muscle Group Selection Buttons */}
         <motion.div
@@ -392,7 +635,7 @@ export default function LogWorkout() {
               <button
                 key={muscleGroup}
                 onClick={() => handleMuscleGroupClick(muscleGroup)}
-                className={`card p-8 text-center transition-all hover:scale-105 bg-gradient-to-br ${colors.bg} border ${colors.border} hover:${colors.glow}`}
+                className={`card p-8 text-center transition-all bg-gradient-to-br ${colors.bg} border ${colors.border} hover-device:hover:scale-105`}
               >
                 <p className={`font-heading font-extrabold text-2xl capitalize ${colors.text}`}>
                   {muscleGroup}
@@ -436,7 +679,7 @@ export default function LogWorkout() {
               </div>
               <button
                 onClick={() => removeExercise(exerciseIndex)}
-                className="text-negative hover:text-accent transition-colors"
+                className="text-negative transition-colors hover-device:hover:text-accent"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
@@ -507,7 +750,7 @@ export default function LogWorkout() {
                     className={`flex items-center justify-center rounded-lg transition-all ${
                       set.isPR
                         ? "bg-warning text-background"
-                        : "bg-surface text-muted hover:bg-neutral"
+                        : "bg-surface text-muted hover-device:hover:bg-neutral"
                     }`}
                     title="Mark as PR"
                   >
@@ -561,7 +804,7 @@ export default function LogWorkout() {
                     <p className="font-semibold">{new Date(w.date || w.createdAt).toLocaleString()}</p>
                     <p className="text-sm text-muted">{w.exercises?.length || 0} exercises</p>
                   </div>
-                  <button className="text-negative hover:text-accent" onClick={() => deleteWorkout(w._id)}>Delete</button>
+                  <button className="text-negative hover-device:hover:text-accent" onClick={() => deleteWorkout(w._id)}>Delete</button>
                 </div>
               ))}
             </div>
@@ -596,7 +839,7 @@ export default function LogWorkout() {
                       setShowExerciseModal(false);
                       setExerciseSearch("");
                     }}
-                    className="text-muted hover:text-white"
+                    className="text-muted hover-device:hover:text-white"
                   >
                     <X className="w-6 h-6" />
                   </button>
@@ -619,7 +862,7 @@ export default function LogWorkout() {
                   <button
                     key={exercise}
                     onClick={() => handleExerciseClick(exercise)}
-                    className="w-full text-left p-4 rounded-lg bg-surface hover:bg-primary/20 transition-all border border-transparent hover:border-primary/30"
+                    className="w-full text-left p-4 rounded-lg bg-surface transition-all border border-transparent hover-device:hover:bg-primary/20 hover-device:hover:border-primary/30"
                   >
                     <p className="font-semibold">{exercise}</p>
                   </button>
@@ -662,7 +905,7 @@ export default function LogWorkout() {
                     setCurrentExercise(null);
                     setExerciseRecommendation(null);
                   }}
-                  className="text-muted hover:text-white"
+                  className="text-muted hover-device:hover:text-white"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -696,30 +939,30 @@ export default function LogWorkout() {
                   <div key={setIndex} className="p-4 bg-surface/50 rounded-lg space-y-3">
                     <p className="font-bold text-primary">Set {setIndex + 1}</p>
                     
-                    {/* Weight Control */}
-                    <div>
-                      <label className="text-sm text-muted mb-2 block">Weight (kg)</label>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => adjustWeight(setIndex, -2.5)}
-                          className="p-2 bg-surface rounded-lg hover:bg-primary/20"
-                        >
-                          <Minus className="w-5 h-5" />
-                        </button>
-                        <input
-                          type="number"
-                          step="2.5"
+                    {/* Weight Control with PR Detection */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => adjustWeight(setIndex, -2.5)}
+                        className="p-2 bg-surface rounded-lg hover-device:hover:bg-primary/20 shrink-0"
+                      >
+                        <Minus className="w-5 h-5" />
+                      </button>
+                      <div className="flex-1">
+                        <PRGlowInput
                           value={set.weight}
-                          onChange={(e) => updateCurrentSet(setIndex, 'weight', Number(e.target.value))}
-                          className="input flex-1 text-center text-xl font-bold font-mono"
+                          onChange={(val) => updateCurrentSet(setIndex, 'weight', val)}
+                          previousMax={userPRs[currentExercise.name] || 0}
+                          label=""
+                          placeholder="0"
+                          unit="kg"
                         />
-                        <button
-                          onClick={() => adjustWeight(setIndex, 2.5)}
-                          className="p-2 bg-surface rounded-lg hover:bg-primary/20"
-                        >
-                          <Plus className="w-5 h-5" />
-                        </button>
                       </div>
+                      <button
+                        onClick={() => adjustWeight(setIndex, 2.5)}
+                        className="p-2 bg-surface rounded-lg hover-device:hover:bg-primary/20 shrink-0"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
                     </div>
 
                     {/* Reps */}
@@ -752,7 +995,7 @@ export default function LogWorkout() {
                       className={`w-full p-3 rounded-lg font-semibold transition-all ${
                         set.isPR
                           ? 'bg-warning text-background'
-                          : 'bg-surface hover:bg-neutral text-muted'
+                          : 'bg-surface text-muted hover-device:hover:bg-neutral'
                       }`}
                     >
                       {set.isPR ? '🏆 Personal Record!' : 'Mark as PR'}
@@ -788,6 +1031,49 @@ export default function LogWorkout() {
 
       {/* Plate Calculator Modal */}
       <PlateCalculator isOpen={showPlateCalc} onClose={() => setShowPlateCalc(false)} />
+
+      {/* Volume Toast */}
+      <AnimatePresence>
+        {showVolumeToast && (
+          <VolumeToast
+            volume={currentVolume}
+            volumeChange={volumeChange}
+            onClose={() => setShowVolumeToast(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Session Summary Modal */}
+      <AnimatePresence>
+        {showSessionSummary && sessionData && (
+          <WorkoutSessionSummary
+            {...sessionData}
+            onClose={() => {
+              setShowSessionSummary(false);
+              // Show achievements if any
+              if (newAchievements.length > 0) {
+                setShowAchievements(true);
+              } else {
+                router.push("/dashboard");
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Achievement Unlock Modal */}
+      <AnimatePresence>
+        {showAchievements && newAchievements.length > 0 && (
+          <AchievementUnlockModal
+            achievements={newAchievements}
+            onClose={() => {
+              setShowAchievements(false);
+              setNewAchievements([]);
+              router.push("/dashboard");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

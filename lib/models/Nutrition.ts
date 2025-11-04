@@ -7,6 +7,12 @@ export interface IMeal {
   carbs: number;
   fats: number;
   timestamp: Date;
+  // Smart logging fields
+  type?: 'smart' | 'manual';
+  foodName?: string;
+  quantity?: number;
+  unit?: string;
+  mealType?: string;
 }
 
 export interface INutrition {
@@ -29,6 +35,12 @@ const MealSchema = new Schema<IMeal>({
   carbs: { type: Number, required: true },
   fats: { type: Number, required: true },
   timestamp: { type: Date, default: Date.now },
+  // Smart logging fields
+  type: { type: String, enum: ['smart', 'manual'] },
+  foodName: { type: String },
+  quantity: { type: Number },
+  unit: { type: String },
+  mealType: { type: String },
 }, { _id: false });
 
 const NutritionSchema = new Schema<INutrition>({

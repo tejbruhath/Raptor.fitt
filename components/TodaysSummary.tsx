@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Circle, Plus, X } from "lucide-react";
+import { useHoverCapability } from "@/lib/hooks/useHoverCapability";
 
 export default function TodaysSummary() {
+  const canHover = useHoverCapability();
   const [tasks, setTasks] = useState([
     { id: 1, title: "Log workout", completed: true },
     { id: 2, title: "Hit protein goal (165g)", completed: false },
@@ -48,7 +50,7 @@ export default function TodaysSummary() {
           </span>
           <button
             onClick={() => setShowAddTask(!showAddTask)}
-            className="p-2 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+            className="p-2 bg-primary/10 rounded-lg transition-colors hover-device:hover:bg-primary/20"
           >
             <Plus className="w-4 h-4 text-primary" />
           </button>
@@ -83,7 +85,7 @@ export default function TodaysSummary() {
           />
           <button
             onClick={addTask}
-            className="px-4 py-2 bg-primary text-background rounded-lg hover:bg-primary-light transition-colors"
+            className="px-4 py-2 bg-primary text-background rounded-lg transition-colors hover-device:hover:bg-primary-light"
           >
             Add
           </button>
@@ -95,8 +97,8 @@ export default function TodaysSummary() {
         {tasks.map((task) => (
           <motion.div
             key={task.id}
-            whileHover={{ x: 4 }}
-            className="flex items-center gap-3 p-3 bg-surface/50 rounded-lg hover:bg-surface transition-all group"
+            whileHover={canHover ? { x: 4 } : {}}
+            className="flex items-center gap-3 p-3 bg-surface/50 rounded-lg transition-all group hover-device:hover:bg-surface"
           >
             <button
               onClick={() => toggleTask(task.id)}
@@ -117,7 +119,7 @@ export default function TodaysSummary() {
             </button>
             <button
               onClick={() => deleteTask(task.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-negative/20 rounded transition-all"
+              className="p-1 rounded transition-all hover-device:opacity-0 hover-device:group-hover:opacity-100 hover-device:hover:bg-negative/20"
             >
               <X className="w-4 h-4 text-negative" />
             </button>

@@ -43,9 +43,23 @@
 }
 
 @layer components {
-  /* Glass morphism effect */
+  /* Glass morphism effect - reduced blur on mobile for performance */
   .glass {
-    @apply bg-surface/50 backdrop-blur-lg border border-white/10;
+    @apply bg-surface/50 backdrop-blur-sm border border-white/10;
+  }
+
+  /* Desktop-only enhanced glass with heavy blur */
+  @media (hover: hover) and (pointer: fine) {
+    .glass-enhanced {
+      @apply bg-surface/40 backdrop-blur-xl border border-white/10;
+    }
+  }
+
+  /* Mobile-friendly glass (static translucent) */
+  @media not all and (hover: hover) and (pointer: fine) {
+    .glass-enhanced {
+      @apply bg-surface/60 border border-white/10;
+    }
   }
 
   /* Neon glow effect */
@@ -72,24 +86,24 @@
   }
 
   .btn-primary {
-    @apply btn bg-gradient-to-r from-primary to-primary-light text-background hover:shadow-glow;
+    @apply btn bg-gradient-to-r from-primary to-primary-light text-background;
   }
 
   .btn-secondary {
-    @apply btn bg-gradient-to-r from-secondary to-secondary-light text-white hover:shadow-glow-secondary;
+    @apply btn bg-gradient-to-r from-secondary to-secondary-light text-white;
   }
 
   .btn-ghost {
-    @apply btn bg-transparent border-2 border-primary text-primary hover:bg-primary/10;
+    @apply btn bg-transparent border-2 border-primary text-primary;
   }
 
   /* Card styles */
   .card {
-    @apply glass rounded-lg p-6 hover:border-primary/30 transition-all duration-300;
+    @apply glass rounded-lg p-6 transition-all duration-300;
   }
 
   .card-elevated {
-    @apply card hover:translate-y-[-2px] hover:shadow-glow;
+    @apply card;
   }
 
   /* Input styles */
@@ -130,7 +144,7 @@
   }
 
   .hover-lift {
-    @apply hover:translate-y-[-4px] transition-transform duration-200;
+    @apply transition-transform duration-200;
   }
 
   /* Page transitions */
@@ -171,6 +185,69 @@
   /* Skeleton loading */
   .skeleton {
     @apply animate-pulse bg-neutral/50 rounded;
+  }
+
+  /* Desktop-only hover effects - Only apply on devices with hover capability */
+  @media (hover: hover) and (pointer: fine) {
+    /* Button hover effects */
+    .btn-primary:hover {
+      box-shadow: 0 0 12px rgba(20, 241, 192, 0.5);
+    }
+
+    .btn-secondary:hover {
+      box-shadow: 0 0 12px rgba(225, 78, 255, 0.5);
+    }
+
+    .btn-ghost:hover {
+      background-color: rgba(20, 241, 192, 0.1);
+    }
+
+    /* Card hover effects */
+    .card:hover {
+      border-color: rgba(20, 241, 192, 0.3);
+    }
+
+    .card-elevated:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 12px rgba(20, 241, 192, 0.5);
+    }
+
+    /* Hover lift effect - translates element up on hover */
+    .hover-lift:hover {
+      transform: translateY(-4px);
+    }
+
+    /* Card hover glow - adds neon glow effect */
+    .hover-glow:hover {
+      box-shadow: 0 0 20px rgba(20, 241, 192, 0.4);
+    }
+
+    /* Hover scale effect */
+    .hover-scale:hover {
+      transform: scale(1.05);
+    }
+
+    /* Hover border glow */
+    .hover-border-glow:hover {
+      border-color: rgba(20, 241, 192, 0.6);
+      box-shadow: 0 0 12px rgba(20, 241, 192, 0.3);
+    }
+
+    /* Secondary glow */
+    .hover-glow-secondary:hover {
+      box-shadow: 0 0 20px rgba(225, 78, 255, 0.4);
+    }
+
+    /* Accent glow */
+    .hover-glow-accent:hover {
+      box-shadow: 0 0 20px rgba(255, 0, 92, 0.4);
+    }
+
+    /* Combined lift + glow for cards */
+    .hover-lift-glow:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 20px rgba(20, 241, 192, 0.3);
+    }
   }
 }
 

@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Responsive hover states - only apply on devices with hover capability
+      screens: {
+        'hover-device': { 'raw': '(hover: hover) and (pointer: fine)' },
+      },
       colors: {
         background: "#0A0A0A",
         surface: "#121212",

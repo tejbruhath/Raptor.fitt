@@ -57,13 +57,27 @@ export default function Analytics() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
+  // Refetch analytics when page becomes visible (fixes stale data after workout)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && session?.user?.id) {
+        fetchAnalytics();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [session?.user?.id]);
+
   async function fetchAnalytics() {
     try {
       const userId = session?.user?.id;
       if (!userId) return;
+      
+      // CRITICAL: Add timestamp to prevent caching
+      const timestamp = Date.now();
 
       // Fetch strength index for growth chart
-      const siRes = await fetch(`/api/strength-index?userId=${userId}`);
+      const siRes = await fetch(`/api/strength-index?userId=${userId}&t=${timestamp}`);
       if (siRes.ok) {
         const { strengthIndex } = await siRes.json();
         // Convert to chart format
@@ -75,7 +89,8 @@ export default function Analytics() {
       }
 
       // Fetch growth prediction (predicted vs observed vs future) - 45 days
-      const predRes = await fetch(`/api/growth-prediction?userId=${userId}&days=45`);
+      // CRITICAL: Also add timestamp here to get fresh predictions
+      const predRes = await fetch(`/api/growth-prediction?userId=${userId}&days=45&t=${timestamp}`);
       if (predRes.ok) {
         const predData = await predRes.json();
         if (predData.prediction) {
@@ -84,7 +99,7 @@ export default function Analytics() {
       }
 
       // Fetch workouts for volume chart
-      const workoutsRes = await fetch(`/api/workouts?userId=${userId}`);
+      const workoutsRes = await fetch(`/api/workouts?userId=${userId}&t=${timestamp}`);
       if (!workoutsRes.ok) {
         console.error('Failed to fetch workouts');
         setLoading(false);
@@ -102,7 +117,9 @@ export default function Analytics() {
         weeklyVolume[week] = (weeklyVolume[week] || 0) + volume;
       });
 
+      // CRITICAL FIX: Sort by date before slicing to fix reversed x-axis
       const volumeChart = Object.entries(weeklyVolume)
+        .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
         .map(([date, volume]) => ({
           date: new Date(date).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
           volume,

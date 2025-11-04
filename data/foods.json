@@ -1,0 +1,162 @@
+[
+  {
+    "name": "oats",
+    "aliases": ["oat", "porridge", "rolled oats"],
+    "unit": "100g",
+    "macros": { "protein": 13.0, "carbs": 68.0, "fats": 7.0, "calories": 389 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "eggs",
+    "aliases": ["egg", "boiled egg", "scrambled eggs"],
+    "unit": "2 large (100g)",
+    "macros": { "protein": 13.0, "carbs": 1.0, "fats": 10.0, "calories": 155 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "chicken breast",
+    "aliases": ["chicken", "grilled chicken", "chicken breasts"],
+    "unit": "100g",
+    "macros": { "protein": 31.0, "carbs": 0.0, "fats": 3.6, "calories": 165 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "banana",
+    "aliases": ["bananas", "kela"],
+    "unit": "100g",
+    "macros": { "protein": 1.1, "carbs": 23.0, "fats": 0.3, "calories": 96 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "whey protein",
+    "aliases": ["whey", "protein shake", "protein powder"],
+    "unit": "1 scoop (30g)",
+    "macros": { "protein": 24.0, "carbs": 3.0, "fats": 2.0, "calories": 120 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "paneer",
+    "aliases": ["cottage cheese", "panir"],
+    "unit": "100g",
+    "macros": { "protein": 18.0, "carbs": 1.2, "fats": 20.0, "calories": 265 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "green peas",
+    "aliases": ["peas", "matar", "green pea"],
+    "unit": "100g",
+    "macros": { "protein": 5.4, "carbs": 14.0, "fats": 0.4, "calories": 81 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "soya chunks",
+    "aliases": ["soya", "soy chunks", "meal maker", "nutri nuggets"],
+    "unit": "100g (dry)",
+    "macros": { "protein": 52.0, "carbs": 33.0, "fats": 0.5, "calories": 345 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "chana",
+    "aliases": ["chickpeas", "black chickpeas", "chole", "kabuli chana"],
+    "unit": "100g (dry)",
+    "macros": { "protein": 20.0, "carbs": 63.0, "fats": 5.0, "calories": 360 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "peanuts",
+    "aliases": ["peanut", "groundnuts", "moongfali"],
+    "unit": "100g",
+    "macros": { "protein": 25.8, "carbs": 16.1, "fats": 49.2, "calories": 567 },
+    "category": "fats",
+    "color": "accent"
+  },
+  {
+    "name": "almonds",
+    "aliases": ["almond", "badam"],
+    "unit": "100g",
+    "macros": { "protein": 21.2, "carbs": 22.0, "fats": 50.0, "calories": 579 },
+    "category": "fats",
+    "color": "accent"
+  },
+  {
+    "name": "museli",
+    "aliases": ["muesli", "granola"],
+    "unit": "100g",
+    "macros": { "protein": 9.0, "carbs": 66.0, "fats": 7.0, "calories": 380 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "peanut butter",
+    "aliases": ["pb", "peanutbutter"],
+    "unit": "100g",
+    "macros": { "protein": 25.0, "carbs": 20.0, "fats": 50.0, "calories": 588 },
+    "category": "fats",
+    "color": "accent"
+  },
+  {
+    "name": "rice",
+    "aliases": ["cooked rice", "white rice", "chawal"],
+    "unit": "100g",
+    "macros": { "protein": 2.7, "carbs": 28.0, "fats": 0.3, "calories": 130 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "curd",
+    "aliases": ["yogurt", "dahi", "yoghurt"],
+    "unit": "100g",
+    "macros": { "protein": 3.5, "carbs": 4.0, "fats": 3.0, "calories": 60 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "milk",
+    "aliases": ["toned milk", "doodh"],
+    "unit": "100ml",
+    "macros": { "protein": 3.3, "carbs": 4.7, "fats": 1.5, "calories": 42 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "roti",
+    "aliases": ["chapati", "wheat roti", "phulka"],
+    "unit": "1 medium (50g)",
+    "macros": { "protein": 4.0, "carbs": 18.0, "fats": 3.0, "calories": 110 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "olive oil",
+    "aliases": ["oil", "cooking oil"],
+    "unit": "1 tbsp (14g)",
+    "macros": { "protein": 0.0, "carbs": 0.0, "fats": 14.0, "calories": 120 },
+    "category": "fats",
+    "color": "accent"
+  },
+  {
+    "name": "sweet potato",
+    "aliases": ["shakarkandi", "yam"],
+    "unit": "100g",
+    "macros": { "protein": 1.6, "carbs": 20.0, "fats": 0.1, "calories": 86 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "brown bread",
+    "aliases": ["bread", "whole wheat bread", "toast"],
+    "unit": "2 slices (60g)",
+    "macros": { "protein": 5.0, "carbs": 24.0, "fats": 2.0, "calories": 130 },
+    "category": "carbs",
+    "color": "warning"
+  }
+]

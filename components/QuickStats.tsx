@@ -8,6 +8,7 @@ interface QuickStatsProps {
   value: string;
   subtext: string;
   color: "primary" | "secondary" | "positive" | "negative" | "warning";
+  onClick?: () => void;
 }
 
 export default function QuickStats({
@@ -16,6 +17,7 @@ export default function QuickStats({
   value,
   subtext,
   color,
+  onClick,
 }: QuickStatsProps) {
   const colorClasses = {
     primary: "text-primary border-primary/30 bg-primary/5",
@@ -28,6 +30,8 @@ export default function QuickStats({
   return (
     <motion.div
       whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
       className={`p-6 rounded-lg border-2 ${colorClasses[color]} transition-all cursor-pointer min-w-[140px]`}
     >
       <div className={`mb-3 ${colorClasses[color].split(" ")[0]}`}>{icon}</div>

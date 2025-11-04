@@ -1,0 +1,151 @@
+"use client";
+
+import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Trophy } from "lucide-react";
+import confetti from "canvas-confetti";
+
+interface Achievement {
+  achievementId: string;
+  title: string;
+  description: string;
+  category: string;
+  icon: string;
+}
+
+interface AchievementUnlockModalProps {
+  achievements: Achievement[];
+  onClose: () => void;
+}
+
+export default function AchievementUnlockModal({ achievements, onClose }: AchievementUnlockModalProps) {
+  useEffect(() => {
+    // Fire confetti when modal opens
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    const randomInRange = (min: number, max: number) => {
+      return Math.random() * (max - min) + min;
+    };
+
+    const interval = setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+      });
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const categoryColors: Record<string, string> = {
+    milestone: "from-warning to-primary",
+    consistency: "from-accent to-warning",
+    strength: "from-primary to-secondary",
+    volume: "from-positive to-primary",
+    social: "from-secondary to-accent",
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ type: "spring", duration: 0.5 }}
+        className="card-elevated max-w-lg w-full max-h-[80vh] overflow-y-auto relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-surface transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="text-center mb-6">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-warning to-primary flex items-center justify-center"
+          >
+            <Trophy className="w-10 h-10 text-background" />
+          </motion.div>
+          <h2 className="text-3xl font-heading font-bold mb-2">
+            {achievements.length === 1 ? "Achievement Unlocked!" : "Achievements Unlocked!"}
+          </h2>
+          <p className="text-muted">
+            {achievements.length === 1 
+              ? "You've earned a new achievement!" 
+              : `You've earned ${achievements.length} new achievements!`}
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {achievements.map((achievement, index) => (
+            <motion.div
+              key={achievement.achievementId}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 * index }}
+              className={`relative overflow-hidden rounded-lg p-6 bg-gradient-to-br ${
+                categoryColors[achievement.category] || "from-primary to-secondary"
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div className="text-5xl">{achievement.icon}</div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-heading font-bold text-background mb-1">
+                    {achievement.title}
+                  </h3>
+                  <p className="text-background/80 text-sm">{achievement.description}</p>
+                  <span className="inline-block mt-2 px-3 py-1 bg-background/20 rounded-full text-xs text-background font-semibold uppercase">
+                    {achievement.category}
+                  </span>
+                </div>
+              </div>
+
+              {/* Shimmer effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                initial={{ x: "-100%" }}
+                animate={{ x: "200%" }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 3,
+                }}
+              />
+            </motion.div>
+          ))}
+        </div>
+
+        <button onClick={onClose} className="btn-primary w-full mt-6">
+          Awesome!
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}

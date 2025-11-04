@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Home, Plus, Bot, BarChart3, User } from "lucide-react";
+import { useHoverCapability } from "@/lib/hooks/useHoverCapability";
 
 export default function BottomNav() {
+  const canHover = useHoverCapability();
   const pathname = usePathname();
 
   const navItems = [
@@ -28,16 +30,16 @@ export default function BottomNav() {
             <Link key={item.href} href={item.href}>
               <motion.div
                 whileTap={{ scale: 0.9 }}
-                whileHover={{ scale: 1.05 }}
+                whileHover={canHover ? { scale: 1.05 } : {}}
                 data-tour={item.dataTour}
                 className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all relative ${
                   isCenter
                     ? isActive
                       ? "text-background bg-primary shadow-lg shadow-primary/50 -translate-y-2"
-                      : "text-background bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-primary/30 -translate-y-2 hover:shadow-primary/50"
+                      : "text-background bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-primary/30 -translate-y-2 hover-device:hover:shadow-primary/50"
                     : isActive
                     ? "text-primary bg-primary/10"
-                    : "text-muted hover:text-white"
+                    : "text-muted hover-device:hover:text-white"
                 }`}
               >
                 {isCenter && !isActive && (

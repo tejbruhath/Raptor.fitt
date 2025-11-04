@@ -71,22 +71,28 @@ export default function Profile() {
   async function fetchUserData() {
     try {
       const userId = session?.user?.id;
+      const timestamp = Date.now(); // Prevent caching
 
       // Fetch user data
-      const userRes = await fetch(`/api/user?userId=${userId}`);
+      const userRes = await fetch(`/api/user?userId=${userId}&t=${timestamp}`);
       if (userRes.ok) {
         const { user } = await userRes.json();
         setUserData(user);
       }
 
       // Fetch workouts for stats
-      const workoutsRes = await fetch(`/api/workouts?userId=${userId}`);
+      const workoutsRes = await fetch(`/api/workouts?userId=${userId}&t=${timestamp}`);
       const { workouts } = await workoutsRes.json();
 
       // Fetch SI
-      const siRes = await fetch(`/api/strength-index?userId=${userId}`);
+      const siRes = await fetch(`/api/strength-index?userId=${userId}&t=${timestamp}`);
       const { strengthIndex } = await siRes.json();
-      const latestSI = strengthIndex[strengthIndex.length - 1];
+      
+      // CRITICAL: Sort SI data by date to get the actual latest value
+      const sortedSI = strengthIndex && strengthIndex.length > 0 
+        ? [...strengthIndex].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        : [];
+      const latestSI = sortedSI.length > 0 ? sortedSI[sortedSI.length - 1] : null;
 
       // Calculate streak
       const sortedWorkouts = workouts.sort((a: any, b: any) => 

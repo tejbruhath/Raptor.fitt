@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Save } from "lucide-react";
 import Link from "next/link";
+import AchievementUnlockModal from "@/components/AchievementUnlockModal";
 
 export default function LogRecovery() {
   const { data: session } = useSession();
@@ -20,6 +21,8 @@ export default function LogRecovery() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<any[]>([]);
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showAchievements, setShowAchievements] = useState(false);
 
   // Auto-load last recovery log when page opens
   useEffect(() => {
@@ -82,6 +85,34 @@ export default function LogRecovery() {
       });
 
       if (response.ok) {
+        // Recalculate SI
+        try {
+          await fetch('/api/strength-index', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: session.user.id }),
+          });
+        } catch (e) {
+          console.warn('SI recalculation failed');
+        }
+
+        // Check for new achievements
+        try {
+          const achRes = await fetch('/api/achievements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: session.user.id }),
+          });
+          const achData = await achRes.json();
+          if (achData.newAchievements && achData.newAchievements.length > 0) {
+            setNewAchievements(achData.newAchievements);
+            setShowAchievements(true);
+            return; // Don't redirect yet
+          }
+        } catch (e) {
+          console.warn('Achievement check failed');
+        }
+
         router.push("/dashboard");
       } else {
         alert("Failed to save recovery");
@@ -342,6 +373,20 @@ export default function LogRecovery() {
           </motion.div>
         )}
       </main>
+
+      {/* Achievement Unlock Modal */}
+      <AnimatePresence>
+        {showAchievements && newAchievements.length > 0 && (
+          <AchievementUnlockModal
+            achievements={newAchievements}
+            onClose={() => {
+              setShowAchievements(false);
+              setNewAchievements([]);
+              router.push("/dashboard");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
