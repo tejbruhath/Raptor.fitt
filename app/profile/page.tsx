@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { User, Settings, LogOut, Trophy, Camera, Edit } from "lucide-react";
 import Link from "next/link";
+import AchievementUnlockModal from "@/components/AchievementUnlockModal";
+import { ACHIEVEMENTS } from "@/components/AchievementBadge";
 
 export default function Profile() {
   const { data: session, status } = useSession();
@@ -25,6 +27,8 @@ export default function Profile() {
     shoulders: 0,
   });
   const [editingMeasurements, setEditingMeasurements] = useState(false);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -65,6 +69,7 @@ export default function Profile() {
   useEffect(() => {
     if (session?.user?.id) {
       fetchUserData();
+      fetchAchievements();
     }
   }, [session]);
 
@@ -142,6 +147,25 @@ export default function Profile() {
     } catch (error) {
       console.error('Failed to save measurements:', error);
     }
+  }
+
+  async function fetchAchievements() {
+    try {
+      const userId = session?.user?.id;
+      const response = await fetch(`/api/achievements?userId=${userId}`);
+      const { achievements } = await response.json();
+      
+      // Filter out PR achievements and get IDs
+      const regularAchievements = achievements.filter((a: any) => !a.isPR);
+      const ids = new Set<string>(regularAchievements.map((a: any) => a.achievementId));
+      setUnlockedAchievementIds(ids);
+    } catch (error) {
+      console.error('Failed to fetch achievements:', error);
+    }
+  }
+
+  function handleAchievementsClick() {
+    setShowAchievementModal(true);
   }
 
   if (status === "loading" || loading) {
@@ -300,13 +324,13 @@ export default function Profile() {
         >
           <h3 className="text-xl font-heading font-bold mb-4">Settings</h3>
           <div className="space-y-4">
-            <Link href="/achievements" className="w-full flex items-center justify-between p-4 bg-surface rounded-lg hover:bg-neutral transition-colors">
+            <button onClick={handleAchievementsClick} className="w-full flex items-center justify-between p-4 bg-surface rounded-lg hover:bg-neutral transition-colors text-left">
               <span className="flex items-center gap-3">
                 <Trophy className="w-5 h-5 text-warning" />
                 <span>Achievements</span>
               </span>
               <span className="text-muted">→</span>
-            </Link>
+            </button>
             <Link href="/onboarding" className="w-full flex items-center justify-between p-4 bg-surface rounded-lg hover:bg-neutral transition-colors">
               <span className="flex items-center gap-3">
                 <Edit className="w-5 h-5 text-primary" />
@@ -317,6 +341,24 @@ export default function Profile() {
           </div>
         </motion.div>
       </main>
+
+      {/* Achievement Modal */}
+      <AnimatePresence>
+        {showAchievementModal && (
+          <AchievementUnlockModal
+            achievements={ACHIEVEMENTS.map(ach => ({
+              achievementId: ach.id,
+              title: ach.title,
+              description: ach.description,
+              category: ach.category || 'general',
+              icon: ach.icon,
+              earned: unlockedAchievementIds.has(ach.id),
+            }))}
+            onClose={() => setShowAchievementModal(false)}
+            isUnlockNotification={false}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
