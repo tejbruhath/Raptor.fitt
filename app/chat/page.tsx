@@ -55,20 +55,26 @@ export default function Chat() {
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("AI API Error:", errorData);
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
       const data = await response.json();
 
       const aiMessage: Message = {
         role: "assistant",
-        content: data.response,
+        content: data.response || "No response from AI",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI error:", error);
       const errorMessage: Message = {
         role: "assistant",
-        content: "Failed to get response. Try again.",
+        content: `⚠️ Error: ${error.message || 'Failed to get response. Try again.'}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);

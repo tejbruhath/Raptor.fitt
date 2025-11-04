@@ -1,9 +1,9 @@
+/* Driver.js tour styles */
+@import 'driver.js/dist/driver.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Driver.js tour styles */
-@import 'driver.js/dist/driver.css';
 
 @layer base {
   :root {

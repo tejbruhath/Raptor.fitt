@@ -12,12 +12,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { query, userId } = body;
 
+    console.log('🤖 AI Request:', { query, userId });
+
     if (!query || !userId) {
       return NextResponse.json({ error: 'Query and userId required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey) {
+      console.error('❌ Gemini API key not found');
       return NextResponse.json(
         { error: 'Gemini API key not configured' },
         { status: 500 }
@@ -25,15 +28,37 @@ export async function POST(request: NextRequest) {
     }
 
     await dbConnect();
+    console.log('✅ Database connected');
 
-    // Build comprehensive user context
-    const [user, workouts, nutrition, recovery, strengthIndex] = await Promise.all([
-      User.findOne({ _id: userId }),
-      Workout.find({ userId }).sort({ date: -1 }).limit(30),
-      Nutrition.find({ userId }).sort({ date: -1 }).limit(30),
-      Recovery.find({ userId }).sort({ date: -1 }).limit(30),
-      StrengthIndex.find({ userId }).sort({ date: -1 }).limit(10),
-    ]);
+    // Build comprehensive user context with error handling
+    let user: any;
+    let workouts: any[];
+    let nutrition: any[];
+    let recovery: any[];
+    let strengthIndex: any[];
+    
+    try {
+      [user, workouts, nutrition, recovery, strengthIndex] = await Promise.all([
+        User.findById(userId).lean(),
+        Workout.find({ userId }).sort({ date: -1 }).limit(30).lean(),
+        Nutrition.find({ userId }).sort({ date: -1 }).limit(30).lean(),
+        Recovery.find({ userId }).sort({ date: -1 }).limit(30).lean(),
+        StrengthIndex.find({ userId }).sort({ date: -1 }).limit(10).lean(),
+      ]);
+      console.log('✅ User data fetched:', {
+        user: !!user,
+        workouts: workouts.length,
+        nutrition: nutrition.length,
+        recovery: recovery.length,
+        si: strengthIndex.length
+      });
+    } catch (dbError: any) {
+      console.error('❌ Database query error:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to fetch user data', details: dbError.message },
+        { status: 500 }
+      );
+    }
 
     // Calculate recent stats
     const totalWorkouts = workouts.length;
@@ -56,9 +81,9 @@ export async function POST(request: NextRequest) {
 
     const context = {
       user: {
-        name: user?.name,
-        bodyweight: user?.bodyweight,
-        trainingAge: user?.trainingAge,
+        name: user?.name || 'User',
+        bodyweight: user?.bodyweight || 0,
+        trainingAge: user?.trainingAge || 0,
       },
       currentStats: {
         strengthIndex: currentSI,
@@ -79,9 +104,37 @@ export async function POST(request: NextRequest) {
         soreness: r.soreness,
       })),
     };
+    
+    console.log('📊 Context built:', {
+      hasUser: !!user,
+      workouts: workouts.length,
+      recovery: recovery.length,
+      si: currentSI
+    });
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // Initialize Gemini AI
+    let genAI, model, result, response;
+    
+    try {
+      genAI = new GoogleGenerativeAI(apiKey);
+      
+      // Debug: List available models
+      try {
+        const availableModels = await genAI.listModels();
+        console.log('📋 Available Gemini models:', availableModels.data.map(m => m.name));
+      } catch (listError) {
+        console.log('⚠️ Could not list models:', listError.message);
+      }
+      
+      model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      console.log('✅ Gemini model initialized');
+    } catch (initError: any) {
+      console.error('❌ Gemini initialization error:', initError);
+      return NextResponse.json(
+        { error: 'Failed to initialize AI model', details: initError.message },
+        { status: 500 }
+      );
+    }
 
     const systemPrompt = `You are Raptor AI, a brutally honest, data-driven fitness coach. You analyze training data and provide direct, actionable insights. No fluff, no generic motivation - just facts and specific recommendations.
 
@@ -94,17 +147,28 @@ Key Instructions:
 - Point out patterns, both good and concerning
 - Give one actionable next step
 - Use a confident, no-nonsense tone
+- If user has no data yet, acknowledge it and give beginner advice
 
 User Question: ${query}`;
 
-    const result = await model.generateContent(systemPrompt);
-    const response = result.response.text();
+    try {
+      console.log('🔄 Sending request to Gemini...');
+      result = await model.generateContent(systemPrompt);
+      response = result.response.text();
+      console.log('✅ Gemini response received');
+    } catch (geminiError: any) {
+      console.error('❌ Gemini API error:', geminiError);
+      return NextResponse.json(
+        { error: 'Failed to generate AI response', details: geminiError.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ response, context }, { status: 200 });
   } catch (error: any) {
-    console.error('AI Error:', error);
+    console.error('❌ Unexpected AI Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to generate response' },
+      { error: error.message || 'Failed to generate response', stack: error.stack },
       { status: 500 }
     );
   }

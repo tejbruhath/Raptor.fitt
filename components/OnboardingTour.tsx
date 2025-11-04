@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { driver, DriveStep } from "driver.js";
 import { HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,7 +12,7 @@ interface OnboardingTourProps {
 export default function OnboardingTour({ page = 'dashboard' }: OnboardingTourProps) {
   const [showHelpButton, setShowHelpButton] = useState(true);
 
-  const startTour = () => {
+  const startTour = useCallback(() => {
     const steps = page === 'dashboard' ? dashboardSteps : page === 'log' ? logSteps : analyticsSteps;
     
     const driverObj = driver({
@@ -26,7 +26,7 @@ export default function OnboardingTour({ page = 'dashboard' }: OnboardingTourPro
     });
     
     driverObj.drive();
-  };
+  }, [page]);
 
   useEffect(() => {
     // Check if user has seen the tour before
@@ -40,7 +40,7 @@ export default function OnboardingTour({ page = 'dashboard' }: OnboardingTourPro
       
       return () => clearTimeout(timer);
     }
-  }, [page]);
+  }, [page, startTour]);
 
   const dashboardSteps: DriveStep[] = [
     {

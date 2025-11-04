@@ -6,7 +6,7 @@
 **File**: `/components/BottomNav.tsx`
 
 **Structure**:
-```
+```text
 🏠 Home | ➕ Log | 🤖 AI Coach (CENTER) | 📊 Stats | 👤 User
 ```
 
@@ -59,7 +59,7 @@
 ## 📦 Dependencies Added
 
 ```bash
-npm install react-joyride
+npm install driver.js
 ```
 
 ---
@@ -73,7 +73,7 @@ npm install react-joyride
 ```
 
 ### Log Hub
-```
+```text
 Bottom Nav → Tap "Log" → Pick action → Log
 ```
 

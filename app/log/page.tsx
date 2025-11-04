@@ -28,22 +28,26 @@ export default function LogHub() {
   async function fetchStats() {
     try {
       const userId = session?.user?.id;
-      
-      // Get today's date
-      const today = new Date().toISOString().split('T')[0];
-      
+
+      // Get today's date in local timezone
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
       // Fetch today's workouts
       const workoutsRes = await fetch(`/api/workouts?userId=${userId}`);
       if (workoutsRes.ok) {
         const data = await workoutsRes.json();
-        const todayWorkouts = data.workouts.filter((w: any) => 
-          new Date(w.date).toISOString().split('T')[0] === today
-        );
+        const todayWorkouts = data.workouts.filter((w: any) => {
+          const workoutDate = new Date(w.date);
+          workoutDate.setHours(0, 0, 0, 0);
+          return workoutDate.getTime() === today.getTime();
+        });
         setStats(prev => ({ ...prev, workouts: todayWorkouts.length }));
       }
 
       // Fetch today's nutrition
-      const nutritionRes = await fetch(`/api/nutrition?userId=${userId}&date=${today}`);
+      const nutritionRes = await fetch(`/api/nutrition?userId=${userId}&date=${todayStr}`);
       if (nutritionRes.ok) {
         const data = await nutritionRes.json();
         setStats(prev => ({ ...prev, meals: data.nutrition.length }));
@@ -53,9 +57,11 @@ export default function LogHub() {
       const recoveryRes = await fetch(`/api/recovery?userId=${userId}`);
       if (recoveryRes.ok) {
         const data = await recoveryRes.json();
-        const todayRecovery = data.recovery.filter((r: any) => 
-          new Date(r.date).toISOString().split('T')[0] === today
-        );
+        const todayRecovery = data.recovery.filter((r: any) => {
+          const recoveryDate = new Date(r.date);
+          recoveryDate.setHours(0, 0, 0, 0);
+          return recoveryDate.getTime() === today.getTime();
+        });
         setStats(prev => ({ ...prev, recovery: todayRecovery.length }));
       }
     } catch (error) {
