@@ -3,14 +3,41 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Activity, TrendingUp, Apple, Moon, Plus, Zap, User } from "lucide-react";
 import Link from "next/link";
-import StrengthIndexRing from "@/components/StrengthIndexRing";
 import QuickStats from "@/components/QuickStats";
-import TodaysSummary from "@/components/TodaysSummary";
-import RecoveryScoreWidget from "@/components/RecoveryScoreWidget";
-import OnboardingTour from "@/components/OnboardingTour";
+
+const OnboardingTour = dynamic(() => import("@/components/OnboardingTour"), {
+  ssr: false,
+  loading: () => null,
+});
+
+const StrengthIndexRing = dynamic(() => import("@/components/StrengthIndexRing"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="w-48 h-48 rounded-full bg-surface animate-pulse"
+      aria-hidden="true"
+    />
+  ),
+});
+
+const TodaysSummary = dynamic(() => import("@/components/TodaysSummary"), {
+  ssr: false,
+  loading: () => (
+    <div className="card animate-pulse h-40" aria-hidden="true" />
+  ),
+});
+
+const RecoveryScoreWidget = dynamic(() => import("@/components/RecoveryScoreWidget"), {
+  ssr: false,
+  loading: () => (
+    <div className="card animate-pulse h-64" aria-hidden="true" />
+  ),
+});
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -69,21 +96,19 @@ export default function Dashboard() {
     try {
       const userId = session?.user?.id;
 
-      // Fetch workouts
-      const workoutsRes = await fetch(`/api/workouts?userId=${userId}`);
-      const { workouts } = await workoutsRes.json();
+      const [workoutsRes, nutritionRes, recoveryRes, siRes] = await Promise.all([
+        fetch(`/api/workouts?userId=${userId}`),
+        fetch(`/api/nutrition?userId=${userId}`),
+        fetch(`/api/recovery?userId=${userId}`),
+        fetch(`/api/strength-index?userId=${userId}`),
+      ]);
 
-      // Fetch nutrition
-      const nutritionRes = await fetch(`/api/nutrition?userId=${userId}`);
-      const { nutrition } = await nutritionRes.json();
-
-      // Fetch recovery
-      const recoveryRes = await fetch(`/api/recovery?userId=${userId}`);
-      const { recovery } = await recoveryRes.json();
-
-      // Fetch strength index
-      const siRes = await fetch(`/api/strength-index?userId=${userId}`);
-      const { strengthIndex: siData } = await siRes.json();
+      const [{ workouts }, { nutrition }, { recovery }, { strengthIndex: siData }] = await Promise.all([
+        workoutsRes.json(),
+        nutritionRes.json(),
+        recoveryRes.json(),
+        siRes.json(),
+      ]);
       const latestSI = siData && siData.length > 0 ? siData[siData.length - 1] : null;
 
       // Calculate stats
@@ -250,7 +275,14 @@ export default function Dashboard() {
       <header className="glass border-b border-white/10 sticky top-0 z-50 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/raptor-logo.svg" alt="Raptor.Fitt" className="h-10 w-auto max-w-[180px]" />
+            <Image
+              src="/raptor-logo.svg"
+              alt="Raptor.Fitt"
+              width={160}
+              height={40}
+              priority
+              className="h-10 w-auto max-w-[180px]"
+            />
           </div>
           
           {/* Streak */}

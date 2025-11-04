@@ -1,7 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 export function CardSkeleton() {
   return (
     <div className="card animate-pulse">
