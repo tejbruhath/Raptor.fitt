@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import NonChromiumModal from "@/components/NonChromiumModal";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -67,6 +68,7 @@ export default function RootLayout({
           {children}
           <NavbarWrapper />
           <PWAInstallPrompt />
+          <NonChromiumModal />
         </Providers>
       </body>
     </html>

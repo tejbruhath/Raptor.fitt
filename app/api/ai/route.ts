@@ -18,6 +18,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Query and userId required' }, { status: 400 });
     }
 
+    if (typeof query !== 'string') {
+      return NextResponse.json({ error: 'Query must be a string' }, { status: 400 });
+    }
+
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length === 0) {
+      return NextResponse.json({ error: 'Query cannot be empty' }, { status: 400 });
+    }
+
+    if (trimmedQuery.length > 5000) {
+      return NextResponse.json({ error: 'Query exceeds 5000 character limit' }, { status: 400 });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       console.error('❌ Gemini API key not found');
@@ -117,15 +130,6 @@ export async function POST(request: NextRequest) {
     
     try {
       genAI = new GoogleGenerativeAI(apiKey);
-      
-      // Debug: List available models
-      try {
-        const availableModels = await genAI.listModels();
-        console.log('📋 Available Gemini models:', availableModels.data.map(m => m.name));
-      } catch (listError) {
-        console.log('⚠️ Could not list models:', listError.message);
-      }
-      
       model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       console.log('✅ Gemini model initialized');
     } catch (initError: any) {
@@ -149,7 +153,7 @@ Key Instructions:
 - Use a confident, no-nonsense tone
 - If user has no data yet, acknowledge it and give beginner advice
 
-User Question: ${query}`;
+User Question: ${trimmedQuery}`;
 
     try {
       console.log('🔄 Sending request to Gemini...');
@@ -164,11 +168,15 @@ User Question: ${query}`;
       );
     }
 
-    return NextResponse.json({ response, context }, { status: 200 });
+    return NextResponse.json({ response, context, query: trimmedQuery }, { status: 200 });
   } catch (error: any) {
     console.error('❌ Unexpected AI Error:', error);
+    const normalizedError = error instanceof Error ? error : new Error('Unknown error');
     return NextResponse.json(
-      { error: error.message || 'Failed to generate response', stack: error.stack },
+      {
+        error: normalizedError.message || 'Failed to generate response',
+        ...(process.env.NODE_ENV !== 'production' && { stack: normalizedError.stack }),
+      },
       { status: 500 }
     );
   }

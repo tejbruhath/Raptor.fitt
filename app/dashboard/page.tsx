@@ -9,7 +9,6 @@ import Link from "next/link";
 import StrengthIndexRing from "@/components/StrengthIndexRing";
 import QuickStats from "@/components/QuickStats";
 import TodaysSummary from "@/components/TodaysSummary";
-import AICoach from "@/components/AICoach";
 import RecoveryScoreWidget from "@/components/RecoveryScoreWidget";
 import OnboardingTour from "@/components/OnboardingTour";
 
@@ -254,22 +253,17 @@ export default function Dashboard() {
             <img src="/raptor-logo.svg" alt="Raptor.Fitt" className="h-10 w-auto max-w-[180px]" />
           </div>
           
-          {/* Streak & AI Coach */}
-          <div className="flex items-center gap-4">
-            <motion.div
-              className="flex items-center gap-2 bg-surface/80 px-4 py-2 rounded-full border border-primary/30"
-              whileHover={{ scale: 1.05 }}
-            >
-              <span className="text-2xl">🔥</span>
-              <div>
-                <p className="text-lg font-bold font-mono text-primary">{streak}</p>
-                <p className="text-xs text-muted">day streak</p>
-              </div>
-            </motion.div>
-            <div data-tour="ai-coach">
-              <AICoach />
+          {/* Streak */}
+          <motion.div
+            className="flex items-center gap-2 bg-surface/80 px-4 py-2 rounded-full border border-primary/30"
+            whileHover={{ scale: 1.05 }}
+          >
+            <span className="text-2xl">🔥</span>
+            <div>
+              <p className="text-lg font-bold font-mono text-primary">{streak}</p>
+              <p className="text-xs text-muted">day streak</p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </header>
 

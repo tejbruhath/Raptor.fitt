@@ -44,6 +44,8 @@ export default function LogHub() {
           return workoutDate.getTime() === today.getTime();
         });
         setStats(prev => ({ ...prev, workouts: todayWorkouts.length }));
+      } else {
+        console.error('Failed to fetch workouts:', workoutsRes.status, workoutsRes.statusText);
       }
 
       // Fetch today's nutrition
@@ -51,6 +53,8 @@ export default function LogHub() {
       if (nutritionRes.ok) {
         const data = await nutritionRes.json();
         setStats(prev => ({ ...prev, meals: data.nutrition.length }));
+      } else {
+        console.error('Failed to fetch nutrition:', nutritionRes.status, nutritionRes.statusText);
       }
 
       // Fetch today's recovery
@@ -63,6 +67,8 @@ export default function LogHub() {
           return recoveryDate.getTime() === today.getTime();
         });
         setStats(prev => ({ ...prev, recovery: todayRecovery.length }));
+      } else {
+        console.error('Failed to fetch recovery:', recoveryRes.status, recoveryRes.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch stats:', error);

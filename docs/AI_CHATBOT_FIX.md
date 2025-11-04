@@ -37,7 +37,7 @@ try {
 ```typescript
 try {
   genAI = new GoogleGenerativeAI(apiKey);
-  model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   console.log('✅ Gemini model initialized');
 } catch (initError: any) {
   console.error('❌ Gemini initialization error:', initError);
@@ -185,7 +185,7 @@ npm run dev
 
 ### Step 3: Check Server Console
 You should see:
-```
+```text
 🤖 AI Request: { query: 'How's my progress?', userId: '...' }
 ✅ Database connected
 ✅ User data fetched: { user: true, workouts: 24, nutrition: 12, recovery: 7, si: 5 }

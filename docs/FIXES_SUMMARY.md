@@ -8,7 +8,7 @@
 ## 🚨 **Primary Issue: AI Chatbot 500 Error**
 
 ### **Problem**
-```
+```text
 POST http://localhost:3001/api/ai 500 (Internal Server Error)
 Error: '[GoogleGenerativeAI Error]: Error fetching from https://...'
 ```
@@ -17,7 +17,7 @@ Error: '[GoogleGenerativeAI Error]: Error fetching from https://...'
 Using deprecated Gemini model name `gemini-pro` which is no longer available.
 
 ### **Solution** ✅
-Updated to current model: `gemini-1.5-flash`
+Updated to current model: `gemini-2.5-flash`
 
 **File**: `app/api/ai/route.ts` (Line 120)
 
@@ -26,7 +26,7 @@ Updated to current model: `gemini-1.5-flash`
 model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
 // After
-model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 ```
 
 ---
@@ -272,7 +272,7 @@ These are **Tailwind CSS directives** that the standard CSS linter doesn't recog
 ### Gemini API Key Verification
 Test your API key directly:
 ```bash
-curl https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_API_KEY \
+curl https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=YOUR_API_KEY \
   -H 'Content-Type: application/json' \
   -d '{"contents":[{"parts":[{"text":"Test"}]}]}'
 ```
@@ -297,4 +297,4 @@ All critical bugs fixed. The app is now:
 
 ---
 
-**🦖 Raptor.Fitt - Your Data-Driven Fitness Coach**
+## 🦖 Raptor.Fitt - Your Data-Driven Fitness Coach
