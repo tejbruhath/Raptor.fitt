@@ -6,6 +6,7 @@ import Recovery from '@/lib/models/Recovery';
 import StrengthIndex from '@/lib/models/StrengthIndex';
 import Achievement from '@/lib/models/Achievement';
 import User from '@/lib/models/User';
+import { rateLimit, rateLimitConfigs, getRateLimitHeaders } from '@/lib/rateLimit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,6 +18,22 @@ export async function GET(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    }
+
+    // SECURITY: Rate limiting for data export
+    const rateLimitResult = rateLimit(userId, rateLimitConfigs.export);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Export rate limit exceeded. Please try again later.' },
+        { 
+          status: 429,
+          headers: getRateLimitHeaders(
+            rateLimitConfigs.export.limit,
+            rateLimitResult.remaining,
+            rateLimitResult.resetTime
+          )
+        }
+      );
     }
 
     // Fetch all user data

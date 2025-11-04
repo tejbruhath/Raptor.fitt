@@ -6,11 +6,28 @@ import Nutrition from '@/lib/models/Nutrition';
 import Recovery from '@/lib/models/Recovery';
 import StrengthIndex from '@/lib/models/StrengthIndex';
 import User from '@/lib/models/User';
+import { rateLimit, rateLimitConfigs, getRateLimitHeaders } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { query, userId } = body;
+
+    // SECURITY: Rate limiting for AI endpoint
+    const rateLimitResult = rateLimit(userId, rateLimitConfigs.ai);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { 
+          status: 429,
+          headers: getRateLimitHeaders(
+            rateLimitConfigs.ai.limit,
+            rateLimitResult.remaining,
+            rateLimitResult.resetTime
+          )
+        }
+      );
+    }
 
     console.log('🤖 AI Request:', { query, userId });
 

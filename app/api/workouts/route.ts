@@ -4,6 +4,7 @@ import Workout from '@/lib/models/Workout';
 import StrengthIndex from '@/lib/models/StrengthIndex';
 import User from '@/lib/models/User';
 import { calculateStrengthIndex } from '@/lib/strengthIndex';
+import { workoutSchema } from '@/lib/validation/schemas';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,14 +33,17 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const body = await request.json();
-    const { userId, date, exercises, notes, duration } = body;
-
-    if (!userId || !date || !exercises || exercises.length === 0) {
+    
+    // SECURITY: Input validation
+    const validationResult = workoutSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Invalid input data', details: validationResult.error.errors },
         { status: 400 }
       );
     }
+    
+    const { userId, date, exercises, notes, duration } = validationResult.data;
 
     const workout = await Workout.create({
       userId,
