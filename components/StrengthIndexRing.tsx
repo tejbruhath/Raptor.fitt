@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Trophy } from "lucide-react";
+import { getSITier, getTierProgress, getNextTier, getPointsToNextTier } from "@/lib/siTiers";
 
 interface StrengthIndexRingProps {
   value: number;
@@ -15,7 +16,12 @@ export default function StrengthIndexRing({
   trend,
 }: StrengthIndexRingProps) {
   const circumference = 2 * Math.PI * 90;
-  const progress = (value / 250) * 100; // Max SI of 250 (elite natural)
+  const tier = getSITier(value);
+  const tierProgress = getTierProgress(value);
+  const nextTier = getNextTier(value);
+  const pointsToNext = getPointsToNextTier(value);
+  
+  const progress = (value / 300) * 100; // Display progress out of 300
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   const trendIcon = {
@@ -65,8 +71,8 @@ export default function StrengthIndexRing({
         {/* Gradient definition */}
         <defs>
           <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#14F1C0" />
-            <stop offset="100%" stopColor="#E14EFF" />
+            <stop offset="0%" stopColor={tier.color} stopOpacity="1" />
+            <stop offset="100%" stopColor={tier.color} stopOpacity="0.6" />
           </linearGradient>
         </defs>
       </svg>
@@ -79,20 +85,47 @@ export default function StrengthIndexRing({
           transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
           className="text-center"
         >
-          <p className="text-sm text-muted uppercase tracking-wide mb-1">
-            Strength Index
-          </p>
-          <div className="text-6xl font-bold font-mono gradient-text mb-2">
+          {/* Tier Badge */}
+          <motion.div
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r ${tier.gradient} text-white text-xs font-bold mb-2 ${tier.glow} shadow-lg`}
+            animate={{
+              boxShadow: [
+                `0 0 20px ${tier.color}40`,
+                `0 0 30px ${tier.color}60`,
+                `0 0 20px ${tier.color}40`,
+              ],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            <span>{tier.emoji}</span>
+            <span>{tier.name}</span>
+            {!nextTier && <Trophy className="w-3 h-3" />}
+          </motion.div>
+
+          <div className="text-5xl font-bold font-mono mb-1" style={{ color: tier.color }}>
             {value.toFixed(1)}
           </div>
+          <p className="text-xs text-muted uppercase tracking-wide mb-2">
+            Strength Index
+          </p>
+          
           <div className={`flex items-center gap-2 justify-center ${trendColor[trend]}`}>
             {trendIcon[trend]}
-            <span className="font-mono font-semibold">
+            <span className="font-mono font-semibold text-sm">
               {change > 0 ? "+" : ""}
               {change.toFixed(1)}%
             </span>
           </div>
-          <p className="text-xs text-muted mt-2">this week</p>
+          
+          {nextTier && (
+            <p className="text-xs text-muted mt-2">
+              {pointsToNext.toFixed(1)} pts to {nextTier.name}
+            </p>
+          )}
         </motion.div>
       </div>
 

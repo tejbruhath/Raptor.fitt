@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Driver.js tour styles */
+@import 'driver.js/dist/driver.css';
+
 @layer base {
   :root {
     --background: 10 10 10;

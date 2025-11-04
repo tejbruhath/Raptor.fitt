@@ -96,7 +96,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="min-h-screen bg-background raptor-pattern flex flex-col">
+    <div className="min-h-screen bg-background raptor-pattern flex flex-col pb-32">
       {/* Header */}
       <header className="glass border-b border-white/10 sticky top-0 z-50 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -115,7 +115,7 @@ export default function Chat() {
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-8">
+      <div className="flex-1 overflow-y-auto px-4 py-8 pb-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {messages.length === 0 && (
             <motion.div

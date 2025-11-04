@@ -11,6 +11,7 @@ import QuickStats from "@/components/QuickStats";
 import TodaysSummary from "@/components/TodaysSummary";
 import AICoach from "@/components/AICoach";
 import RecoveryScoreWidget from "@/components/RecoveryScoreWidget";
+import OnboardingTour from "@/components/OnboardingTour";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -245,6 +246,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background raptor-pattern pb-32">
+      <OnboardingTour page="dashboard" />
       {/* Header */}
       <header className="glass border-b border-white/10 sticky top-0 z-50 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -264,7 +266,9 @@ export default function Dashboard() {
                 <p className="text-xs text-muted">day streak</p>
               </div>
             </motion.div>
-            <AICoach />
+            <div data-tour="ai-coach">
+              <AICoach />
+            </div>
           </div>
         </div>
       </header>
@@ -275,6 +279,7 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="card-elevated text-center py-12"
+          data-tour="strength-index"
         >
           <div className="flex flex-col md:flex-row items-center justify-center gap-12">
             {/* SI Ring */}
@@ -342,6 +347,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
+            data-tour="recovery-score"
           >
             <RecoveryScoreWidget userId={session.user.id} />
           </motion.section>
