@@ -26,10 +26,11 @@ export async function GET() {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('Model list request failed:', data);
       return NextResponse.json({
         error: 'Failed to fetch models',
-        status: response.status,
-        details: data,
+        statusCode: response.status,
+        message: data?.error?.message ?? data?.error ?? 'Upstream service error',
       }, { status: response.status });
     }
 

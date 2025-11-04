@@ -58,10 +58,10 @@ export default function OnboardingTour({ page = 'dashboard' }: OnboardingTourPro
       },
     },
     {
-      element: "[data-tour='ai-coach']",
+      element: "[data-tour='nav-ai']",
       popover: {
         title: "AI Coach 🤖",
-        description: "Your intelligent fitness assistant. Ask questions, get workout advice, and receive personalized guidance.",
+        description: "Your intelligent fitness assistant. Use this tab anytime to ask questions and get personalized guidance.",
       },
     },
     {
@@ -76,13 +76,6 @@ export default function OnboardingTour({ page = 'dashboard' }: OnboardingTourPro
       popover: {
         title: "Log Tab",
         description: "Central hub to log workouts, nutrition, and recovery. Everything in one place!",
-      },
-    },
-    {
-      element: "[data-tour='nav-ai']",
-      popover: {
-        title: "AI Coach Hub",
-        description: "Tap here anytime to chat with your AI coach. The brain of your app!",
       },
     },
     {
