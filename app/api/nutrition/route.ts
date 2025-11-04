@@ -44,29 +44,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize date to start of day for consistent comparison
+    const queryDate = new Date(date);
+    queryDate.setUTCHours(0, 0, 0, 0);
+
     // Calculate totals
     const totals = meals?.reduce(
       (acc: any, meal: any) => ({
-        calories: acc.calories + meal.calories,
-        protein: acc.protein + meal.protein,
-        carbs: acc.carbs + meal.carbs,
-        fats: acc.fats + meal.fats,
+        calories: acc.calories + (meal.calories || 0),
+        protein: acc.protein + (meal.protein || 0),
+        carbs: acc.carbs + (meal.carbs || 0),
+        fats: acc.fats + (meal.fats || 0),
       }),
       { calories: 0, protein: 0, carbs: 0, fats: 0 }
     );
 
-    const nutrition = await Nutrition.create({
+    // Check if nutrition log already exists for this user and date
+    const existingLog = await Nutrition.findOne({
       userId,
-      date: new Date(date),
-      meals: meals || [],
-      totalCalories: totals?.calories || 0,
-      totalProtein: totals?.protein || 0,
-      totalCarbs: totals?.carbs || 0,
-      totalFats: totals?.fats || 0,
-      waterIntake: waterIntake || 0,
+      date: {
+        $gte: queryDate,
+        $lt: new Date(queryDate.getTime() + 24 * 60 * 60 * 1000)
+      }
     });
 
-    return NextResponse.json({ nutrition }, { status: 201 });
+    let nutrition;
+    
+    if (existingLog) {
+      // Update existing log instead of creating duplicate
+      nutrition = await Nutrition.findByIdAndUpdate(
+        existingLog._id,
+        {
+          $set: {
+            meals: meals || [],
+            totalCalories: totals?.calories || 0,
+            totalProtein: totals?.protein || 0,
+            totalCarbs: totals?.carbs || 0,
+            totalFats: totals?.fats || 0,
+            waterIntake: waterIntake ?? existingLog.waterIntake,
+          }
+        },
+        { new: true, runValidators: true }
+      );
+      
+      return NextResponse.json({ nutrition, updated: true }, { status: 200 });
+    } else {
+      // Create new log
+      nutrition = await Nutrition.create({
+        userId,
+        date: queryDate,
+        meals: meals || [],
+        totalCalories: totals?.calories || 0,
+        totalProtein: totals?.protein || 0,
+        totalCarbs: totals?.carbs || 0,
+        totalFats: totals?.fats || 0,
+        waterIntake: waterIntake || 0,
+      });
+
+      return NextResponse.json({ nutrition, created: true }, { status: 201 });
+    }
   } catch (error) {
     console.error('Error creating nutrition log:', error);
     return NextResponse.json({ error: 'Failed to create nutrition log' }, { status: 500 });

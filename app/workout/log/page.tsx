@@ -682,12 +682,12 @@ export default function LogWorkout() {
                     exercise={exerciseRecommendation.exercise}
                     lastWeight={exerciseRecommendation.lastWeight}
                     lastReps={exerciseRecommendation.lastReps}
-                    lastSets={exerciseRecommendation.lastSets || currentExercise.sets.length}
+                    lastSets={exerciseRecommendation.lastSets ?? currentExercise.sets.length}
                     suggestedWeight={exerciseRecommendation.suggestedWeight}
                     suggestedReps={exerciseRecommendation.suggestedReps}
-                    suggestedSets={exerciseRecommendation.suggestedSets || currentExercise.sets.length}
+                    suggestedSets={exerciseRecommendation.suggestedSets ?? currentExercise.sets.length}
                     reasoning={exerciseRecommendation.recommendation}
-                    confidence={exerciseRecommendation.confidence || 85}
+                    confidence={exerciseRecommendation.confidence ?? 85}
                   />
                 )}
                 

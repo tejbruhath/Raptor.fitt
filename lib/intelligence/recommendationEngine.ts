@@ -236,8 +236,13 @@ export function analyzeWorkoutQuality(
   feedback: string;
   adherence: number; // 0-100
 } {
-  const weightAdherence = Math.min(100, (actual.weight / planned.suggestedWeight) * 100);
-  const volumeAdherence = Math.min(100, ((actual.sets * actual.reps) / (planned.suggestedSets * planned.suggestedReps)) * 100);
+  // Guard against division by zero
+  const weightDen = planned.suggestedWeight || 1;
+  const setsDen = planned.suggestedSets || 1;
+  const repsDen = planned.suggestedReps || 1;
+  
+  const weightAdherence = Math.min(100, (actual.weight / weightDen) * 100);
+  const volumeAdherence = Math.min(100, ((actual.sets * actual.reps) / (setsDen * repsDen)) * 100);
   const adherence = Math.round((weightAdherence * 0.6 + volumeAdherence * 0.4));
   
   let quality: 'excellent' | 'good' | 'fair' | 'poor';
