@@ -34,8 +34,8 @@ const WorkoutPRSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Compound index for user + exercise
-WorkoutPRSchema.index({ userId: 1, exerciseName: 1 });
+// Compound index for user + exercise (unique to prevent duplicate PRs)
+WorkoutPRSchema.index({ userId: 1, exerciseName: 1 }, { unique: true });
 
 // Index for sorting by date
 WorkoutPRSchema.index({ userId: 1, achievedAt: -1 });

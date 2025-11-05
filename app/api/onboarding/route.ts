@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import StrengthIndex from '@/lib/models/StrengthIndex';
@@ -6,11 +8,16 @@ import { calculateStrengthIndexFrom1RMs } from '@/lib/strengthIndex';
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const body = await request.json();
     const {
-      userId,
       bodyweight,
       height,
       age,
@@ -27,9 +34,8 @@ export async function POST(request: NextRequest) {
       deadlift1RM,
     } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
+    // Use session userId instead of trusting body
+    const userId = session.user.id;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -76,7 +82,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ message: 'Onboarding complete', user }, { status: 200 });
+    return NextResponse.json({ 
+      message: 'Onboarding complete', 
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        onboarded: user.onboarded,
+      }
+    }, { status: 200 });
   } catch (error) {
     console.error('Onboarding error:', error);
     return NextResponse.json(

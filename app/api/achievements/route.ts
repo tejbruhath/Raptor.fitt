@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Achievement from '@/lib/models/Achievement';
 import { ACHIEVEMENTS } from '@/lib/constants/achievements';
@@ -8,15 +10,15 @@ import { Follow } from '@/lib/models/Social';
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    // Authenticate user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
 
+    const userId = session.user.id;
     const unlocked = await Achievement.find({ userId }).sort({ unlockedAt: -1 });
 
     return NextResponse.json({ achievements: unlocked }, { status: 200 });
@@ -31,14 +33,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId } = body;
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    // Authenticate user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
+
+    const userId = session.user.id;
 
     const workouts = await Workout.find({ userId });
     const siHistory = await StrengthIndex.find({ userId });

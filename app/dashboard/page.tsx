@@ -79,7 +79,11 @@ export default function Dashboard() {
 
   async function checkOnboarding() {
     try {
-      const res = await fetch(`/api/user?userId=${session?.user?.id}`);
+      const res = await fetch('/api/user');
+      if (!res.ok) {
+        console.error('Failed to check onboarding status');
+        return true;
+      }
       const { user } = await res.json();
       if (!user?.onboarded) {
         router.push('/onboarding');
@@ -87,7 +91,8 @@ export default function Dashboard() {
       }
       setUserOnboarded(true);
       return true;
-    } catch {
+    } catch (error) {
+      console.error('Onboarding check error:', error);
       return true;
     }
   }

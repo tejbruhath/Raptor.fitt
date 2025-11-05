@@ -50,7 +50,7 @@ export default function Profile() {
         await fetch('/api/user', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: session?.user?.id, profileImage: data.url }),
+          body: JSON.stringify({ profileImage: data.url }),
         });
       }
     } catch (error) {
@@ -79,7 +79,7 @@ export default function Profile() {
       const timestamp = Date.now(); // Prevent caching
 
       // Fetch user data
-      const userRes = await fetch(`/api/user?userId=${userId}&t=${timestamp}`);
+      const userRes = await fetch(`/api/user?t=${timestamp}`);
       if (userRes.ok) {
         const { user } = await userRes.json();
         setUserData(user);
@@ -139,7 +139,6 @@ export default function Profile() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          userId: session?.user?.id, 
           measurements 
         }),
       });
@@ -152,7 +151,7 @@ export default function Profile() {
   async function fetchAchievements() {
     try {
       const userId = session?.user?.id;
-      const response = await fetch(`/api/achievements?userId=${userId}`);
+      const response = await fetch('/api/achievements');
       const { achievements } = await response.json();
       
       // Filter out PR achievements and get IDs

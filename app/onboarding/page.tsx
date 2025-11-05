@@ -50,7 +50,11 @@ export default function Onboarding() {
       if (!session?.user?.id) return;
       
       try {
-        const res = await fetch(`/api/user?userId=${session.user.id}`);
+        const res = await fetch('/api/user');
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
         const { user } = await res.json();
         
         if (user) {
@@ -134,10 +138,7 @@ export default function Onboarding() {
       const res = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: session.user.id,
-          ...data,
-        }),
+        body: JSON.stringify(data),
       });
 
       if (res.ok) {
