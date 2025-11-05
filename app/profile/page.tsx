@@ -86,11 +86,11 @@ export default function Profile() {
       }
 
       // Fetch workouts for stats
-      const workoutsRes = await fetch(`/api/workouts?userId=${userId}&t=${timestamp}`);
+      const workoutsRes = await fetch(`/api/workouts?t=${timestamp}`);
       const { workouts } = await workoutsRes.json();
 
       // Fetch SI
-      const siRes = await fetch(`/api/strength-index?userId=${userId}&t=${timestamp}`);
+      const siRes = await fetch(`/api/strength-index?t=${timestamp}`);
       const { strengthIndex } = await siRes.json();
       
       // CRITICAL: Sort SI data by date to get the actual latest value

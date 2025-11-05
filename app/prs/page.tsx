@@ -19,7 +19,7 @@ export default function PRHistory() {
 
   async function fetchPRs() {
     try {
-      const res = await fetch(`/api/achievements?userId=${session?.user?.id}`);
+      const res = await fetch('/api/achievements');
       const data = await res.json();
       const prList = data.achievements.filter((a: any) => a.isPR);
       setPrs(prList);

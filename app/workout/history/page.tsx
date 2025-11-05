@@ -21,7 +21,7 @@ export default function WorkoutHistory() {
 
   async function fetchWorkouts() {
     try {
-      const res = await fetch(`/api/workouts?userId=${session?.user?.id}`);
+      const res = await fetch('/api/workouts');
       const data = await res.json();
       setWorkouts(data.workouts || []);
     } catch (error) {

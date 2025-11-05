@@ -24,7 +24,7 @@ export default function Templates() {
 
   async function fetchTemplates() {
     try {
-      const res = await fetch(`/api/templates?userId=${session?.user?.id}`);
+      const res = await fetch('/api/templates');
       const data = await res.json();
       setTemplates(data.templates || []);
     } catch (err) {

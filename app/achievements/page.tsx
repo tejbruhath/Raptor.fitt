@@ -33,8 +33,7 @@ export default function Achievements() {
 
   async function fetchAchievements() {
     try {
-      const userId = session?.user?.id;
-      const response = await fetch(`/api/achievements?userId=${userId}`);
+      const response = await fetch('/api/achievements');
       const { achievements } = await response.json();
       
       // Separate PRs from regular achievements
@@ -48,7 +47,7 @@ export default function Achievements() {
       ));
 
       // Fetch workouts for streak data
-      const workoutsRes = await fetch(`/api/workouts?userId=${userId}`);
+      const workoutsRes = await fetch('/api/workouts');
       if (workoutsRes.ok) {
         const { workouts } = await workoutsRes.json();
         const dates = workouts.map((w: any) => w.date);

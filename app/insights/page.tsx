@@ -21,7 +21,7 @@ export default function Insights() {
 
   async function fetchRecommendations() {
     try {
-      const res = await fetch(`/api/recommendations?userId=${session?.user?.id}`);
+      const res = await fetch('/api/recommendations');
       const data = await res.json();
       setRecommendations(data.recommendations || []);
       setExerciseRecs(data.exerciseRecommendations || []);

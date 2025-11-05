@@ -35,7 +35,7 @@ export default function LogHub() {
       const todayStr = today.toISOString().split('T')[0];
 
       // Fetch today's workouts
-      const workoutsRes = await fetch(`/api/workouts?userId=${userId}`);
+      const workoutsRes = await fetch('/api/workouts');
       if (workoutsRes.ok) {
         const data = await workoutsRes.json();
         const todayWorkouts = data.workouts.filter((w: any) => {
@@ -49,7 +49,7 @@ export default function LogHub() {
       }
 
       // Fetch today's nutrition
-      const nutritionRes = await fetch(`/api/nutrition?userId=${userId}&date=${todayStr}`);
+      const nutritionRes = await fetch(`/api/nutrition?date=${todayStr}`);
       if (nutritionRes.ok) {
         const data = await nutritionRes.json();
         setStats(prev => ({ ...prev, meals: data.nutrition.length }));
@@ -58,7 +58,7 @@ export default function LogHub() {
       }
 
       // Fetch today's recovery
-      const recoveryRes = await fetch(`/api/recovery?userId=${userId}`);
+      const recoveryRes = await fetch('/api/recovery');
       if (recoveryRes.ok) {
         const data = await recoveryRes.json();
         const todayRecovery = data.recovery.filter((r: any) => {

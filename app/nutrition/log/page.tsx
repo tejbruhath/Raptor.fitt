@@ -61,7 +61,7 @@ export default function LogNutrition() {
 
   async function loadLastNutrition() {
     try {
-      const res = await fetch(`/api/nutrition?userId=${session?.user?.id}`);
+      const res = await fetch('/api/nutrition');
       const data = await res.json();
       if (data.nutrition && data.nutrition.length > 0) {
         // Get the most recent nutrition log

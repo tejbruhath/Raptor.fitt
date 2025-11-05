@@ -88,7 +88,7 @@ export default function LogWorkout() {
 
       setLoadingLastWorkout(true);
 
-      const res = await fetch(`/api/workouts?userId=${session.user.id}`);
+      const res = await fetch('/api/workouts');
       const data = await res.json();
       if (data.workouts && data.workouts.length > 0) {
         // Sort by date descending and get most recent
@@ -107,7 +107,7 @@ export default function LogWorkout() {
   async function fetchRecentWorkouts() {
     if (!session?.user?.id) return;
     try {
-      const res = await fetch(`/api/workouts?userId=${session.user.id}`);
+      const res = await fetch('/api/workouts');
       const data = await res.json();
       setRecentWorkouts(data.workouts?.slice(0, 5) || []);
     } catch (e) {
@@ -155,7 +155,7 @@ export default function LogWorkout() {
   async function deleteWorkout(id: string) {
     if (!session?.user?.id) return;
     try {
-      const res = await fetch(`/api/workouts?id=${id}&userId=${session.user.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/workouts?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setRecentWorkouts(prev => prev.filter((w) => w._id !== id));
       }
@@ -173,7 +173,7 @@ export default function LogWorkout() {
 
   async function loadExerciseHistory() {
     try {
-      const res = await fetch(`/api/workouts?userId=${session?.user?.id}`);
+      const res = await fetch('/api/workouts');
       const data = await res.json();
       if (data.workouts) {
         const history: Record<string, Set[]> = {};
@@ -222,7 +222,7 @@ export default function LogWorkout() {
       const requestedExercise = exerciseName;
       
       try {
-        const res = await fetch(`/api/recommendations?userId=${session.user.id}`);
+        const res = await fetch('/api/recommendations');
         if (res.ok) {
           const data = await res.json();
           const rec = data.exerciseRecommendations?.find(

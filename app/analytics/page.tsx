@@ -77,7 +77,7 @@ export default function Analytics() {
       const timestamp = Date.now();
 
       // Fetch strength index for growth chart
-      const siRes = await fetch(`/api/strength-index?userId=${userId}&t=${timestamp}`);
+      const siRes = await fetch(`/api/strength-index?t=${timestamp}`);
       if (siRes.ok) {
         const { strengthIndex } = await siRes.json();
         // Convert to chart format
@@ -99,7 +99,7 @@ export default function Analytics() {
       }
 
       // Fetch workouts for volume chart
-      const workoutsRes = await fetch(`/api/workouts?userId=${userId}&t=${timestamp}`);
+      const workoutsRes = await fetch(`/api/workouts?t=${timestamp}`);
       if (!workoutsRes.ok) {
         console.error('Failed to fetch workouts');
         setLoading(false);
@@ -179,7 +179,7 @@ export default function Analytics() {
       const avgWeeklyVolume = recentWorkouts.length > 0 ? Math.round(totalVolume / 4) : 0;
 
       // Get PRs this month
-      const prsRes = await fetch(`/api/achievements?userId=${userId}`);
+      const prsRes = await fetch('/api/achievements');
       const { achievements } = await prsRes.json();
       const prsThisMonth = achievements.filter((a: any) => {
         if (!a.isPR) return false;

@@ -21,7 +21,7 @@ export default function NutritionHistory() {
 
   async function fetchNutrition() {
     try {
-      const res = await fetch(`/api/nutrition?userId=${session?.user?.id}`);
+      const res = await fetch('/api/nutrition');
       const data = await res.json();
       setNutrition(data.nutrition || []);
     } catch (error) {

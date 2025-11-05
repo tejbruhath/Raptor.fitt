@@ -26,7 +26,7 @@ export default function ExerciseHistory() {
   async function fetchHistory() {
     try {
       const res = await fetch(
-        `/api/exercises/history?userId=${session?.user?.id}&name=${encodeURIComponent(exerciseName)}`
+        `/api/exercises/history?name=${encodeURIComponent(exerciseName)}`
       );
       const data = await res.json();
       setHistory(data.history || []);

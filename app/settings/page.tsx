@@ -28,7 +28,7 @@ export default function Settings() {
 
   async function loadSettings() {
     try {
-      const res = await fetch(`/api/user?userId=${session?.user?.id}`);
+      const res = await fetch('/api/user');
       if (res.ok) {
         const { user } = await res.json();
         if (user.settings) {

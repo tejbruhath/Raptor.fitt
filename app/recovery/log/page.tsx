@@ -34,7 +34,7 @@ export default function LogRecovery() {
 
   async function loadLastRecovery() {
     try {
-      const res = await fetch(`/api/recovery?userId=${session?.user?.id}`);
+      const res = await fetch('/api/recovery');
       const data = await res.json();
       if (data.recovery && data.recovery.length > 0) {
         // Get the most recent recovery log
@@ -56,7 +56,7 @@ export default function LogRecovery() {
 
   async function loadHistory() {
     try {
-      const res = await fetch(`/api/recovery?userId=${session?.user?.id}`);
+      const res = await fetch('/api/recovery');
       const data = await res.json();
       if (data.recovery) {
         setHistory(data.recovery.slice(0, 10)); // Show last 10 entries

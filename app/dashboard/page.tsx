@@ -103,10 +103,10 @@ export default function Dashboard() {
       const timestamp = Date.now(); // Prevent caching
 
       const [workoutsRes, nutritionRes, recoveryRes, siRes] = await Promise.all([
-        fetch(`/api/workouts?userId=${userId}&t=${timestamp}`),
-        fetch(`/api/nutrition?userId=${userId}&t=${timestamp}`),
-        fetch(`/api/recovery?userId=${userId}&t=${timestamp}`),
-        fetch(`/api/strength-index?userId=${userId}&t=${timestamp}`),
+        fetch(`/api/workouts?t=${timestamp}`),
+        fetch(`/api/nutrition?t=${timestamp}`),
+        fetch(`/api/recovery?t=${timestamp}`),
+        fetch(`/api/strength-index?t=${timestamp}`),
       ]);
 
       const [{ workouts }, { nutrition }, { recovery }, { strengthIndex: siData }] = await Promise.all([
