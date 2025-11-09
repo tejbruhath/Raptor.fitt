@@ -8,6 +8,7 @@ import { Trophy, Lock } from "lucide-react";
 import Link from "next/link";
 import AchievementBadge, { ACHIEVEMENTS } from "@/components/AchievementBadge";
 import StreakCalendar from "@/components/StreakCalendar";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function Achievements() {
   const { data: session, status } = useSession();
@@ -90,14 +91,7 @@ export default function Achievements() {
   }
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🏆</div>
-          <p className="text-muted">Loading achievements...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const unlocked = ACHIEVEMENTS.filter((a) => unlockedIds.has(a.id));

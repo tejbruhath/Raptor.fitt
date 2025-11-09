@@ -158,5 +158,125 @@
     "macros": { "protein": 5.0, "carbs": 24.0, "fats": 2.0, "calories": 130 },
     "category": "carbs",
     "color": "warning"
+  },
+  {
+    "name": "grilled chicken with rice",
+    "aliases": ["chicken rice", "grilled chicken rice"],
+    "unit": "1 plate (300g)",
+    "macros": { "protein": 45.0, "carbs": 60.0, "fats": 10.0, "calories": 520 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "idli",
+    "aliases": ["idly", "steamed rice cakes"],
+    "unit": "2 pieces (100g)",
+    "macros": { "protein": 6.0, "carbs": 28.0, "fats": 1.0, "calories": 150 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "dosa",
+    "aliases": ["plain dosa", "sada dosa"],
+    "unit": "1 dosa (120g)",
+    "macros": { "protein": 5.0, "carbs": 35.0, "fats": 3.0, "calories": 180 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "egg dosa",
+    "aliases": ["egg dosa", "dosa with egg"],
+    "unit": "1 dosa (150g)",
+    "macros": { "protein": 12.0, "carbs": 33.0, "fats": 7.0, "calories": 230 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "maggi",
+    "aliases": ["instant noodles", "masala maggi"],
+    "unit": "1 packet (70g)",
+    "macros": { "protein": 8.0, "carbs": 45.0, "fats": 15.0, "calories": 350 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "chicken roll",
+    "aliases": ["roll", "kathi roll"],
+    "unit": "1 roll (200g)",
+    "macros": { "protein": 28.0, "carbs": 38.0, "fats": 15.0, "calories": 420 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "paneer bhurji",
+    "aliases": ["bhurji", "paneer scramble"],
+    "unit": "1 bowl (150g)",
+    "macros": { "protein": 20.0, "carbs": 10.0, "fats": 22.0, "calories": 310 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "egg omelette",
+    "aliases": ["omelette", "omelet"],
+    "unit": "2 eggs (120g)",
+    "macros": { "protein": 13.0, "carbs": 1.0, "fats": 15.0, "calories": 190 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "oats with milk",
+    "aliases": ["oatmeal", "porridge with milk"],
+    "unit": "1 bowl (250g)",
+    "macros": { "protein": 12.0, "carbs": 35.0, "fats": 7.0, "calories": 250 },
+    "category": "carbs",
+    "color": "warning"
+  },
+  {
+    "name": "peanut butter toast",
+    "aliases": ["pb toast", "bread with peanut butter"],
+    "unit": "2 slices (80g)",
+    "macros": { "protein": 10.0, "carbs": 25.0, "fats": 18.0, "calories": 300 },
+    "category": "fats",
+    "color": "accent"
+  },
+  {
+    "name": "plain curd",
+    "aliases": ["plain yogurt", "plain dahi"],
+    "unit": "200g",
+    "macros": { "protein": 8.0, "carbs": 6.0, "fats": 6.0, "calories": 120 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "boiled eggs",
+    "aliases": ["hard boiled eggs", "boiled egg"],
+    "unit": "2 eggs (100g)",
+    "macros": { "protein": 12.0, "carbs": 1.0, "fats": 10.0, "calories": 140 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "grilled paneer sandwich",
+    "aliases": ["paneer sandwich", "grilled sandwich"],
+    "unit": "1 sandwich (150g)",
+    "macros": { "protein": 18.0, "carbs": 35.0, "fats": 15.0, "calories": 350 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "tandoori chicken",
+    "aliases": ["tandoori", "tandoori chicken leg"],
+    "unit": "1 leg (150g)",
+    "macros": { "protein": 30.0, "carbs": 2.0, "fats": 13.0, "calories": 250 },
+    "category": "protein",
+    "color": "primary"
+  },
+  {
+    "name": "protein shake with milk",
+    "aliases": ["whey with milk", "protein milkshake"],
+    "unit": "1 glass (300ml)",
+    "macros": { "protein": 30.0, "carbs": 15.0, "fats": 8.0, "calories": 280 },
+    "category": "protein",
+    "color": "primary"
   }
 ]

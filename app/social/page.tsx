@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Users, TrendingUp, Heart, MessageCircle, Trophy } from "lucide-react";
 import Link from "next/link";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function Social() {
   const { data: session, status } = useSession();
@@ -39,14 +40,7 @@ export default function Social() {
   }
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">👥</div>
-          <p className="text-muted">Loading your feed...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Zap, AlertTriangle, TrendingUp, Moon, Activity } from "lucide-react";
 import Link from "next/link";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function Insights() {
   const { data: session } = useSession();
@@ -34,14 +35,7 @@ export default function Insights() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🎯</div>
-          <p className="text-muted">Analyzing your data...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const getPriorityColor = (priority: string) => {

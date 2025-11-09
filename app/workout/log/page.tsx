@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,8 +18,10 @@ import VolumeToast from "@/components/VolumeToast";
 import WorkoutSessionSummary from "@/components/WorkoutSessionSummary";
 import AchievementUnlockModal from "@/components/AchievementUnlockModal";
 import { useOfflineQueue } from "@/lib/hooks/useOfflineQueue";
-import { parseQuickWorkout, isQuickAddFormat, calculateTotalVolume, compareVolume } from "@/lib/utils/workoutParsing";
+import { parseQuickWorkout, calculateTotalVolume, compareVolume } from "@/lib/utils/workoutParsing";
 import { fetchRecentExercises, fetchSuggestedExercises, fetchUserPRs } from "@/lib/utils/dataFetching";
+import { useToastContext } from "@/components/ToastProvider";
+import { useBeforeUnload } from "@/lib/hooks/useBeforeUnload";
 
 interface Set {
   reps: number;
@@ -41,6 +43,7 @@ export default function LogWorkout() {
   const { data: session } = useSession();
   const router = useRouter();
   const { isOnline, addToQueue } = useOfflineQueue();
+  const { success, error: showError, info } = useToastContext();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [saving, setSaving] = useState(false);
@@ -82,6 +85,78 @@ export default function LogWorkout() {
   const [exerciseRecommendation, setExerciseRecommendation] = useState<any>(null);
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
 
+  // Draft saving
+  const draftTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const initialLoadRef = useRef(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasShownAutoSaveToastRef = useRef(false);
+
+  useBeforeUnload(hasUnsavedChanges, "You have unsaved workout changes.");
+
+  const getDraftKey = () => (session?.user?.id ? `workout_draft_${session.user.id}` : null);
+
+  const persistDraft = () => {
+    const key = getDraftKey();
+    if (!key) return;
+
+    try {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          date,
+          exercises,
+          notes: workoutNotes,
+        })
+      );
+    } catch (error) {
+      console.error("Failed to auto-save workout draft:", error);
+    }
+  };
+
+  const clearDraft = () => {
+    const key = getDraftKey();
+    if (!key) return;
+
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error("Failed to clear workout draft:", error);
+    }
+  };
+
+  const loadDraft = () => {
+    const key = getDraftKey();
+    if (!key) return;
+
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      if (!parsed) return;
+
+      const hasExercises = Array.isArray(parsed.exercises) && parsed.exercises.length > 0;
+      const hasNotes = typeof parsed.notes === "string" && parsed.notes.trim().length > 0;
+
+      if (parsed.date) {
+        setDate(parsed.date);
+      }
+      if (hasExercises) {
+        setExercises(parsed.exercises);
+      }
+      if (typeof parsed.notes === "string") {
+        setWorkoutNotes(parsed.notes);
+      }
+
+      if (hasExercises || hasNotes) {
+        setHasUnsavedChanges(true);
+        info("Restored your unsaved workout draft.", 4000);
+      }
+    } catch (error) {
+      console.error("Failed to load workout draft:", error);
+    }
+  };
+
   async function loadLastWorkout() {
     try {
       if (!session?.user?.id) return;
@@ -120,8 +195,52 @@ export default function LogWorkout() {
       fetchRecentWorkouts();
       loadSmartData();
       setSessionStartTime(new Date()); // Track session start
+      loadDraft();
     }
   }, [session]);
+
+  useEffect(() => {
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      return;
+    }
+
+    const hasContent = exercises.length > 0 || workoutNotes.trim().length > 0;
+
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+    }
+
+    if (!hasContent) {
+      setHasUnsavedChanges(false);
+      hasShownAutoSaveToastRef.current = false;
+      clearDraft();
+      return;
+    }
+
+    setHasUnsavedChanges(true);
+    draftTimerRef.current = setTimeout(() => {
+      persistDraft();
+      if (!hasShownAutoSaveToastRef.current) {
+        info("Auto-saved your workout draft.", 2500);
+        hasShownAutoSaveToastRef.current = true;
+      }
+    }, 1500);
+
+    return () => {
+      if (draftTimerRef.current) {
+        clearTimeout(draftTimerRef.current);
+      }
+    };
+  }, [exercises, workoutNotes, date]);
+
+  useEffect(() => {
+    return () => {
+      if (draftTimerRef.current) {
+        clearTimeout(draftTimerRef.current);
+      }
+    };
+  }, []);
 
   // Update session duration every minute
   useEffect(() => {
@@ -327,7 +446,7 @@ export default function LogWorkout() {
 
   const saveWorkout = async () => {
     if (!session?.user?.id) {
-      alert("Please sign in to save workouts");
+      showError("Please sign in to save workouts");
       return;
     }
 
@@ -345,7 +464,10 @@ export default function LogWorkout() {
       // Offline support
       if (!isOnline) {
         addToQueue('workout', workoutData);
-        alert('Workout saved offline. Will sync when online.');
+        success('Workout saved offline. Will sync when online.', 3000);
+        clearDraft();
+        setHasUnsavedChanges(false);
+        hasShownAutoSaveToastRef.current = false;
         router.push("/dashboard");
         return;
       }
@@ -445,13 +567,16 @@ export default function LogWorkout() {
           prsAchieved: prCount,
           recoveryTip: prCount > 2 ? '48-72h rest recommended after PRs' : 'Great session! Focus on recovery.',
         });
+        clearDraft();
+        setHasUnsavedChanges(false);
+        hasShownAutoSaveToastRef.current = false;
         setShowSessionSummary(true);
       } else {
-        alert("Failed to save workout");
+        showError("Failed to save workout");
       }
     } catch (error) {
       console.error("Save error:", error);
-      alert("Error saving workout");
+      showError("Error saving workout");
     } finally {
       setSaving(false);
     }
@@ -550,7 +675,7 @@ export default function LogWorkout() {
                       setQuickAddInput('');
                       setShowQuickAdd(false);
                     } else {
-                      alert('Invalid format. Try: "Squat 120x5x3"');
+                      showError('Invalid format. Try: "Squat 120x5x3"', 3500);
                     }
                   }
                 }}
@@ -572,7 +697,7 @@ export default function LogWorkout() {
                       setQuickAddInput('');
                       setShowQuickAdd(false);
                     } else {
-                      alert('Invalid format. Try: "Squat 120x5x3"');
+                      showError('Invalid format. Try: "Squat 120x5x3"', 3500);
                     }
                   }
                 }}

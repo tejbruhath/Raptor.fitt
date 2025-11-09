@@ -8,6 +8,7 @@ import { Plus, Edit, Trash2, Copy } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import ToastContainer from "@/components/ToastContainer";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function Templates() {
   const { data: session } = useSession();
@@ -61,14 +62,7 @@ export default function Templates() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">📋</div>
-          <p className="text-muted">Loading templates...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (
