@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Apple, Calendar } from "lucide-react";
-import Link from "next/link";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function NutritionHistory() {
   const { data: session } = useSession();
-  const router = useRouter();
   const [nutrition, setNutrition] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,14 +32,7 @@ export default function NutritionHistory() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🍖</div>
-          <p className="text-muted">Loading nutrition...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (

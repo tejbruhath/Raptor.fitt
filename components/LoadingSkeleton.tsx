@@ -76,3 +76,19 @@ export function DashboardSkeleton() {
     </div>
   );
 }
+
+export function PageLoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
+      <div className="space-y-4 max-w-md w-full px-4">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 bg-surface/50 rounded animate-pulse w-3/4 mx-auto"></div>
+          <div className="h-4 bg-surface/30 rounded animate-pulse w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    </div>
+  );
+}

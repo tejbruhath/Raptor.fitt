@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Dumbbell, Calendar, TrendingUp } from "lucide-react";
+import { Dumbbell, Calendar } from "lucide-react";
 import Link from "next/link";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function WorkoutHistory() {
   const { data: session } = useSession();
@@ -32,14 +33,7 @@ export default function WorkoutHistory() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">💪</div>
-          <p className="text-muted">Loading workouts...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (

@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, BarChart3, Target } from "lucide-react";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function ExerciseHistory() {
   const { data: session } = useSession();
@@ -40,14 +41,7 @@ export default function ExerciseHistory() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">📊</div>
-          <p className="text-muted">Loading history...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const chartData = history.slice(-20).map((entry) => ({

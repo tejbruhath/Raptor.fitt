@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Save } from "lucide-react";
 import Link from "next/link";
 import AchievementUnlockModal from "@/components/AchievementUnlockModal";
+import { useToastContext } from "@/components/ToastProvider";
+import { useBeforeUnload } from "@/lib/hooks/useBeforeUnload";
 
 export default function LogRecovery() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { success, error: showError, info } = useToastContext();
   const [recovery, setRecovery] = useState({
     sleepHours: 7,
     sleepQuality: 7,
@@ -23,14 +26,94 @@ export default function LogRecovery() {
   const [history, setHistory] = useState<any[]>([]);
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
+  const draftTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const initialLoadRef = useRef(true);
+  const hasShownAutoSaveToastRef = useRef(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  useBeforeUnload(hasUnsavedChanges, "You have unsaved recovery changes.");
+
+  const getDraftKey = () => (session?.user?.id ? `recovery_draft_${session.user.id}` : null);
+
+  const persistDraft = () => {
+    const key = getDraftKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify({ recovery }));
+    } catch (error) {
+      console.error("Failed to auto-save recovery draft:", error);
+    }
+  };
+
+  const clearDraft = () => {
+    const key = getDraftKey();
+    if (!key) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error("Failed to clear recovery draft:", error);
+    }
+  };
+
+  const loadDraft = () => {
+    const key = getDraftKey();
+    if (!key) return;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.recovery) {
+        setRecovery((prev) => ({ ...prev, ...parsed.recovery }));
+        setHasUnsavedChanges(true);
+        info("Restored your unsaved recovery draft.", 4000);
+      }
+    } catch (error) {
+      console.error("Failed to load recovery draft:", error);
+    }
+  };
 
   // Auto-load last recovery log when page opens
   useEffect(() => {
     if (session?.user?.id) {
       loadLastRecovery();
       loadHistory();
+      loadDraft();
     }
   }, [session]);
+
+  useEffect(() => {
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      return;
+    }
+
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+    }
+
+    draftTimerRef.current = setTimeout(() => {
+      persistDraft();
+      setHasUnsavedChanges(true);
+      if (!hasShownAutoSaveToastRef.current) {
+        info("Auto-saved your recovery draft.", 2500);
+        hasShownAutoSaveToastRef.current = true;
+      }
+    }, 1500);
+
+    return () => {
+      if (draftTimerRef.current) {
+        clearTimeout(draftTimerRef.current);
+      }
+    };
+  }, [recovery]);
+
+  useEffect(() => {
+    return () => {
+      if (draftTimerRef.current) {
+        clearTimeout(draftTimerRef.current);
+      }
+    };
+  }, []);
 
   async function loadLastRecovery() {
     try {
@@ -68,7 +151,7 @@ export default function LogRecovery() {
 
   const saveRecovery = async () => {
     if (!session?.user?.id) {
-      alert("Please sign in to save recovery");
+      showError("Please sign in to save recovery");
       return;
     }
 
@@ -113,13 +196,17 @@ export default function LogRecovery() {
           console.warn('Achievement check failed');
         }
 
+        clearDraft();
+        setHasUnsavedChanges(false);
+        hasShownAutoSaveToastRef.current = false;
+        success("Recovery logged successfully!", 2500);
         router.push("/dashboard");
       } else {
-        alert("Failed to save recovery");
+        showError("Failed to save recovery");
       }
     } catch (error) {
       console.error("Save error:", error);
-      alert("Error saving recovery");
+      showError("Error saving recovery");
     } finally {
       setSaving(false);
     }

@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { Activity, TrendingUp, Apple, Moon, Plus, Zap, User } from "lucide-react";
 import Link from "next/link";
 import QuickStats from "@/components/QuickStats";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 const OnboardingTour = dynamic(() => import("@/components/OnboardingTour"), {
   ssr: false,
@@ -264,14 +265,7 @@ export default function Dashboard() {
   }
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🦖</div>
-          <p className="text-muted">Loading your data...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (

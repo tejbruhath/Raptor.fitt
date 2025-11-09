@@ -16,7 +16,19 @@ export async function GET(request: NextRequest) {
 
     let query: any = { userId };
     if (date) {
-      query.date = new Date(date);
+      const targetDate = new Date(date);
+
+      // Normalize to UTC start of day for consistent querying
+      const startOfDay = new Date(targetDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+
+      query.date = {
+        $gte: startOfDay,
+        $lt: endOfDay,
+      };
     }
 
     const nutrition = await Nutrition.find(query)
@@ -35,7 +47,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const body = await request.json();
-    const { userId, date, meals, waterIntake } = body;
+    const { userId, date, meals, waterIntake = 0 } = body;
 
     if (!userId || !date) {
       return NextResponse.json(
@@ -44,8 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize date to start of day for consistent comparison
-    const queryDate = new Date(date);
+    // Normalize date to start of day (UTC) for consistent comparison
+    const requestDate = new Date(date);
+    const queryDate = new Date(requestDate);
     queryDate.setUTCHours(0, 0, 0, 0);
 
     // Calculate totals
@@ -76,23 +89,20 @@ export async function POST(request: NextRequest) {
         existingLog._id,
         {
           $set: {
-            meals: meals || [],
             totalCalories: totals?.calories || 0,
             totalProtein: totals?.protein || 0,
             totalCarbs: totals?.carbs || 0,
             totalFats: totals?.fats || 0,
             waterIntake: waterIntake ?? existingLog.waterIntake,
+            date: new Date(
+              new Date(date).toLocaleString('en-US', {
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              })
+            ).toISOString(),
           }
         },
         { new: true, runValidators: true }
       );
-      
-      return NextResponse.json({ nutrition, updated: true }, { status: 200 });
-    } else {
-      // Create new log
-      nutrition = await Nutrition.create({
-        userId,
-        date: queryDate,
         meals: meals || [],
         totalCalories: totals?.calories || 0,
         totalProtein: totals?.protein || 0,

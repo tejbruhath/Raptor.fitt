@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 interface Message {
   role: "user" | "assistant";
@@ -91,14 +92,7 @@ export default function Chat() {
   ];
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🤖</div>
-          <p className="text-muted">Loading Raptor AI...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (

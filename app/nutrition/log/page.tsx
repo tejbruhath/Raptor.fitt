@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Save, Droplet, Sparkles } from "lucide-react";
+import { Plus, Trash2, Save, Droplet, Sparkles, Check } from "lucide-react";
 import Link from "next/link";
 import DatePicker from "@/components/DatePicker";
 import SmartNutritionLogger from "@/components/SmartNutritionLogger";
@@ -12,6 +12,7 @@ import AchievementUnlockModal from "@/components/AchievementUnlockModal";
 import RecentFoodChips from "@/components/RecentFoodChips";
 import { useOfflineQueue } from "@/lib/hooks/useOfflineQueue";
 import { fetchRecentFoods } from "@/lib/utils/dataFetching";
+import { useToastContext } from "@/components/ToastProvider";
 
 interface Meal {
   name: string;
@@ -30,8 +31,8 @@ export default function LogNutrition() {
   const { data: session } = useSession();
   const router = useRouter();
   const { isOnline, addToQueue } = useOfflineQueue();
+  const { success, error: showError } = useToastContext();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [waterIntake, setWaterIntake] = useState(0);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [showSmartLogger, setShowSmartLogger] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -40,14 +41,73 @@ export default function LogNutrition() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [recentFoods, setRecentFoods] = useState<any[]>([]);
   const [favoriteFoods, setFavoriteFoods] = useState<any[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [todayTotals, setTodayTotals] = useState({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const initialLoadRef = useRef(true);
 
-  // Auto-load last nutrition log when page opens
+  // Load data on mount
   useEffect(() => {
     if (session?.user?.id) {
-      loadLastNutrition();
+      loadTodayNutrition();
       loadRecentFoods();
+      loadAutoSavedData();
     }
   }, [session]);
+
+  // Update today's totals when date changes
+  useEffect(() => {
+    if (session?.user?.id && !initialLoadRef.current) {
+      loadTodayNutrition();
+    }
+  }, [date]);
+
+  // Auto-save with debounce
+  useEffect(() => {
+    if (!initialLoadRef.current && meals.length > 0) {
+      setHasUnsavedChanges(true);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        autoSaveToLocalStorage();
+      }, 2000);
+    }
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+    }
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [meals]);
+
+  // Warn on page leave if unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && meals.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, meals]);
+
+  // Show toast on route change if unsaved
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (hasUnsavedChanges && meals.length > 0) {
+        showError('You have unsaved logs. Please save your changes!', 5000);
+      }
+    };
+    return () => {
+      if (hasUnsavedChanges && meals.length > 0) {
+        handleRouteChange();
+      }
+    };
+  }, [hasUnsavedChanges, meals]);
 
   async function loadRecentFoods() {
     try {
@@ -59,17 +119,92 @@ export default function LogNutrition() {
     }
   }
 
-  async function loadLastNutrition() {
+  function loadAutoSavedData() {
     try {
-      const res = await fetch(`/api/nutrition?userId=${session?.user?.id}`);
-      const data = await res.json();
-      if (data.nutrition && data.nutrition.length > 0) {
-        // Get the most recent nutrition log
-        const lastLog = data.nutrition[data.nutrition.length - 1];
-        setMeals(lastLog.meals || []);
+      const saved = localStorage.getItem(`nutrition_draft_${session?.user?.id}`);
+      if (saved) {
+        const { meals: savedMeals, date: savedDate } = JSON.parse(saved);
+        if (savedDate === date) {
+          setMeals(savedMeals);
+          setHasUnsavedChanges(true);
+        }
       }
     } catch (error) {
-      console.error("Failed to load last nutrition:", error);
+      console.error('Failed to load auto-saved data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function autoSaveToLocalStorage() {
+    try {
+      localStorage.setItem(`nutrition_draft_${session?.user?.id}`, JSON.stringify({ meals, date }));
+    } catch (error) {
+      console.error('Failed to auto-save:', error);
+    }
+  }
+
+  async function loadTodayNutrition() {
+    if (!session?.user?.id) return;
+
+    try {
+      const params = new URLSearchParams({
+        userId: session.user.id,
+        date,
+      });
+
+      const res = await fetch(`/api/nutrition?${params.toString()}`, {
+        cache: 'no-store',
+      });
+
+      const data = await res.json();
+
+      if (data?.nutrition && data.nutrition.length > 0) {
+        const aggregated = data.nutrition.reduce(
+          (acc: typeof todayTotals, entry: any) => {
+            const totalsFromEntry = {
+              calories: entry.totalCalories ?? 0,
+              protein: entry.totalProtein ?? 0,
+              carbs: entry.totalCarbs ?? 0,
+              fats: entry.totalFats ?? 0,
+            };
+
+            // Fallback: derive totals from meals if totals are missing
+            if (
+              totalsFromEntry.calories === 0 &&
+              totalsFromEntry.protein === 0 &&
+              totalsFromEntry.carbs === 0 &&
+              totalsFromEntry.fats === 0 &&
+              Array.isArray(entry.meals)
+            ) {
+              totalsFromEntry.calories = entry.meals.reduce((sum: number, meal: any) => sum + (meal.calories || 0), 0);
+              totalsFromEntry.protein = entry.meals.reduce((sum: number, meal: any) => sum + (meal.protein || 0), 0);
+              totalsFromEntry.carbs = entry.meals.reduce((sum: number, meal: any) => sum + (meal.carbs || 0), 0);
+              totalsFromEntry.fats = entry.meals.reduce((sum: number, meal: any) => sum + (meal.fats || 0), 0);
+            }
+
+            return {
+              calories: acc.calories + totalsFromEntry.calories,
+              protein: acc.protein + totalsFromEntry.protein,
+              carbs: acc.carbs + totalsFromEntry.carbs,
+              fats: acc.fats + totalsFromEntry.fats,
+            };
+          },
+          { calories: 0, protein: 0, carbs: 0, fats: 0 }
+        );
+
+        setTodayTotals({
+          calories: Math.round(aggregated.calories),
+          protein: parseFloat(aggregated.protein.toFixed(1)),
+          carbs: parseFloat(aggregated.carbs.toFixed(1)),
+          fats: parseFloat(aggregated.fats.toFixed(1)),
+        });
+      } else {
+        setTodayTotals({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+      }
+    } catch (error) {
+      console.error("Failed to load today's nutrition:", error);
+      setTodayTotals({ calories: 0, protein: 0, carbs: 0, fats: 0 });
     } finally {
       setLoading(false);
     }
@@ -108,7 +243,7 @@ export default function LogNutrition() {
 
   const saveNutrition = async () => {
     if (!session?.user?.id) {
-      alert("Please sign in to save nutrition");
+      showError("Please sign in to save nutrition");
       return;
     }
 
@@ -118,13 +253,14 @@ export default function LogNutrition() {
         userId: session.user.id,
         date: new Date(date).toISOString(),
         meals,
-        waterIntake,
       };
 
       if (!isOnline) {
-        // Queue for offline sync
         addToQueue('nutrition', nutritionData);
-        alert('Saved offline. Will sync when online.');
+        success('Saved offline. Will sync when online.');
+        localStorage.removeItem(`nutrition_draft_${session.user.id}`);
+        setMeals([]);
+        setHasUnsavedChanges(false);
         router.push("/dashboard");
         return;
       }
@@ -136,6 +272,14 @@ export default function LogNutrition() {
       });
 
       if (response.ok) {
+        // Clear local storage and state
+        localStorage.removeItem(`nutrition_draft_${session.user.id}`);
+        setMeals([]);
+        setHasUnsavedChanges(false);
+        
+        // Show success toast
+        success('Nutrition logged successfully! ✓', 2000);
+        
         // Recalculate SI
         try {
           await fetch('/api/strength-index', {
@@ -158,19 +302,21 @@ export default function LogNutrition() {
           if (achData.newAchievements && achData.newAchievements.length > 0) {
             setNewAchievements(achData.newAchievements);
             setShowAchievements(true);
-            return; // Don't redirect yet
+            return;
           }
         } catch (e) {
           console.warn('Achievement check failed');
         }
 
-        router.push("/dashboard");
+        // Reload today's totals and redirect
+        await loadTodayNutrition();
+        setTimeout(() => router.push("/dashboard"), 1000);
       } else {
-        alert("Failed to save nutrition");
+        showError("Failed to save nutrition");
       }
     } catch (error) {
       console.error("Save error:", error);
-      alert("Error saving nutrition");
+      showError("Error saving nutrition");
     } finally {
       setSaving(false);
     }
@@ -196,20 +342,34 @@ export default function LogNutrition() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Date Picker */}
+        {/* Date Picker and Smart Add */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="card"
+          className="grid md:grid-cols-2 gap-4"
         >
-          <DatePicker 
-            value={date} 
-            onChange={setDate} 
-            label="Log Date"
-          />
+          <div className="card">
+            <DatePicker 
+              value={date} 
+              onChange={setDate} 
+              label="Log Date"
+            />
+          </div>
+          <div className="card">
+            <button 
+              onClick={() => setShowSmartLogger(true)} 
+              className="btn-primary w-full h-full flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-5 h-5" />
+              Add Food (Smart)
+            </button>
+            <p className="text-xs text-muted text-center mt-3">
+              💡 Try: "chicken 200g" or "eggs 3" for instant macros
+            </p>
+          </div>
         </motion.div>
 
-        {/* Macro Summary */}
+        {/* Today's Totals - Saved Data */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,27 +379,10 @@ export default function LogNutrition() {
             Today's Totals
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MacroCard label="Calories" value={totals.calories} unit="kcal" color="primary" />
-            <MacroCard label="Protein" value={totals.protein} unit="g" color="positive" />
-            <MacroCard label="Carbs" value={totals.carbs} unit="g" color="warning" />
-            <MacroCard label="Fats" value={totals.fats} unit="g" color="secondary" />
-          </div>
-          
-          {/* Water Intake */}
-          <div className="mt-6">
-            <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-              <Droplet className="w-4 h-4 text-primary" />
-              Water Intake (liters)
-            </label>
-            <input
-              type="number"
-              value={waterIntake || ""}
-              onChange={(e) => setWaterIntake(Number(e.target.value))}
-              className="input w-full"
-              placeholder="0"
-              step="0.1"
-              min="0"
-            />
+            <MacroCard label="Calories" value={todayTotals.calories} unit="kcal" color="primary" />
+            <MacroCard label="Protein" value={todayTotals.protein} unit="g" color="positive" />
+            <MacroCard label="Carbs" value={todayTotals.carbs} unit="g" color="warning" />
+            <MacroCard label="Fats" value={todayTotals.fats} unit="g" color="secondary" />
           </div>
         </motion.div>
 
@@ -263,24 +406,6 @@ export default function LogNutrition() {
           </motion.div>
         )}
 
-        {/* Smart Add Meal Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="card"
-        >
-          <button 
-            onClick={() => setShowSmartLogger(true)} 
-            className="btn-primary w-full flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-5 h-5" />
-            Add Food (Smart)
-          </button>
-          <p className="text-xs text-muted text-center mt-3">
-            💡 Try: "chicken 200g" or "eggs 3" for instant macros
-          </p>
-        </motion.div>
 
         {/* Smart Nutrition Logger Modal */}
         <AnimatePresence>

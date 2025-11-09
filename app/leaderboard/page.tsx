@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Trophy, TrendingUp, TrendingDown, Minus, Crown } from "lucide-react";
 import Link from "next/link";
+import { PageLoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function Leaderboard() {
   const { data: session, status } = useSession();
@@ -36,14 +37,7 @@ export default function Leaderboard() {
   }
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-background raptor-pattern flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🏆</div>
-          <p className="text-muted">Loading rankings...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (
